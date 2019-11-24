@@ -8,6 +8,7 @@ class Encoder(tf.keras.Model):
         super(Encoder, self).__init__()
         
         #Hyperparameters
+        
         self.filter_size1 = 10
         self.filter_size2 = 4
         
@@ -74,9 +75,13 @@ class Decoder(tf.keras.Model):
 class AutoEncoder(tf.keras.Model):
     def __init__(self):
         super(AutoEncoder, self).__init__()
+        self.batch_size = 100
+        self.learning_rate = 0.001
+        
         self.encoder = Encoder()
         self.decoder = Decoder()
     
+        self.optimizer =  tf.keras.optimizers.Adam(self.learning_rate)
     @tf.function
     def call(self, pulses):
        return self.decoder(self.encoder(pulses))
