@@ -50,7 +50,7 @@ def get_data(filename ='./testData11_14bit_100mV.npy'):
                     label[ievt] = 2
             else:
                 label[ievt] = 1
-    data = np.transpose(np.float32(data), axes = (0,2,1))
+    data = np.transpose(np.float32(data)/5000.0, axes = (0,2,1)) # convert units: mV->V
     return data, label
     
     

@@ -5,7 +5,7 @@ import tensorflow as tf
 from autoencoder import AutoEncoder
 import time
 import preprocess
-
+from visualization import plot_1evt
 
 def train(model, train_data):
     
@@ -21,7 +21,7 @@ def train(model, train_data):
     for start, end in zip(range(0, len(shuffled_data) - BSZ, BSZ), range(BSZ, len(shuffled_data), BSZ)):
         with tf.GradientTape() as tape:
             encoded = model.call(shuffled_data[start:end])
-            print("encoding done with ", encoded.get_shape())
+            #print("encoding done with ", encoded.get_shape())
             loss = model.loss_function(encoded, train_data[start:end])
         
         curr_loss += loss
@@ -29,9 +29,9 @@ def train(model, train_data):
         
         gradients = tape.gradient(loss, model.trainable_variables)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))    
-        
-        #if step % 100 == 0:
-        print('%dth batches, \tAvg. loss: %.3f' % (step, tf.exp(curr_loss/step)))
+        #print(step, loss)
+        if step % 50 == 0:
+            print('%dth batches, \tAvg. loss: %.3f' % (step, curr_loss/step))
     return curr_loss/step
 
 
@@ -49,11 +49,13 @@ def main():
         tot_loss = train(model, pulse_data)
         curr_loss += tot_loss
         epoch += 1
-        print('%dth epochs, \tAccuracy: %.3f' % (epoch, curr_loss / epoch))
+        print('%dth epochs, \tloss: %.3f' % (epoch, curr_loss / epoch))
         
     print("Test Accuracy:", curr_loss / num_epochs)
     
     print("Process time : {} s".format(int(time.time() - start)))
+    
+    plot_1evt(pulse_data[733], tf.squeeze(model.call(tf.reshape(pulse_data[733], (1, 2700, 4)))))
     
 if __name__ == '__main__':
 	main()
