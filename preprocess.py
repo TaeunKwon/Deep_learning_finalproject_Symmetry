@@ -22,7 +22,7 @@ def find_peak1(a):
     maxInd = maxInd * (np.array([a[j, maxInd[j]] for j in range(numChannels)]) > threshold)
     return maxInd
     
-def preprocess(filename ='./testData11_14bit_100mV.npy'):
+def get_data(filename ='./testData11_14bit_100mV.npy'):
     '''
     :param filename: name of file to load
     :return: data array (size: numEvt x numCh x numSam) and label array 
@@ -32,6 +32,7 @@ def preprocess(filename ='./testData11_14bit_100mV.npy'):
              Label is 3 if ch 0, 1, 2, and 3 have peak.
     '''
     data = np.load(filename, mmap_mode = 'r')
+    
     numEvents = len(data)
     numChannels = len(data[0])
     peakWhere1 = np.zeros((numEvents,numChannels), dtype = np.int16)
@@ -49,7 +50,7 @@ def preprocess(filename ='./testData11_14bit_100mV.npy'):
                     label[ievt] = 2
             else:
                 label[ievt] = 1
-        
+    data = np.transpose(np.float32(data), axes = (0,2,1))
     return data, label
     
     
