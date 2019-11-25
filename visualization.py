@@ -22,3 +22,17 @@ def plot_1evt(en_input, de_output):
     
     ax[3].set_xlabel('time [8 ns]')
     
+def plot_1ch(en_input, de_output):
+    '''
+    Plot encoder input and decoder output
+    :param en_input: encoder input. 2700 array
+    :param de_output: encoder input. 2700 array
+    '''
+    plt.figure(figsize = [8, 3])
+    plt.plot( en_input,color = 'C0', label = 'input')
+    plt.plot(de_output,'--',color = 'C1', label = 'output')
+    plt.ylabel('amplitude [mV]')
+    plt.legend(loc=1)
+    
+    plt.set_xlabel('time [8 ns]')
+    
