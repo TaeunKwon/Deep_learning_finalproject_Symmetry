@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
 def plot_1evt(en_input, de_output):
     '''
@@ -22,3 +23,33 @@ def plot_1evt(en_input, de_output):
     
     ax[3].set_xlabel('time [8 ns]')
     
+def plot_1ch(en_input, de_output):
+    '''
+    Plot encoder input and decoder output
+    :param en_input: encoder input. 2700 array
+    :param de_output: encoder input. 2700 array
+    '''
+    plt.figure(figsize = [8, 3])
+    plt.plot( en_input,color = 'C0', label = 'input')
+    plt.plot(de_output,'--',color = 'C1', label = 'output')
+    plt.ylabel('amplitude [mV]')
+    plt.legend(loc=1)
+    
+    plt.xlabel('time [8 ns]')
+    
+    plt.show()
+    
+def feature_v_proj(model, data, label):
+    NUM_SAMPLES = min(1000, len(label))
+
+    t_data = data[:NUM_SAMPLES]
+    t_labels = label[:NUM_SAMPLES]
+    z = model.encoder.call(np.reshape(t_data, (-1,1300,1)))
+    
+    tsne = TSNE(n_components=2)
+    transformed = tsne.fit_transform(z)
+    colors = t_labels
+    plt.scatter(transformed[:, 0], transformed[:, 1], c=colors)
+    plt.colorbar()
+    plt.show()
+        
