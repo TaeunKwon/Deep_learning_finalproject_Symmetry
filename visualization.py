@@ -49,7 +49,7 @@ def feature_v_proj(model, data, label):
     tsne = TSNE(n_components=2)
     transformed = tsne.fit_transform(z)
     colors = t_labels
-    plt.scatter(transformed[:, 0], transformed[:, 1], c=colors)
+    plt.scatter(transformed[:, 0], transformed[:, 1], c=colors, s = 2)
     plt.colorbar()
     plt.show()
         
