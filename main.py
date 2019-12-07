@@ -63,7 +63,7 @@ def test(model, test_data):
 
 
 def main():
-    pulse_data, label, test_data, test_label = preprocess.get_data("../testData11_14bit_100mV.npy", 5000, 1000)
+    pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 5000, 1000)
     model = AutoEncoder()
     
     
