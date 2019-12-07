@@ -11,7 +11,7 @@ def train(model, train_data):
     
     BSZ = model.batch_size
     
-    train_data = np.reshape(train_data, (-1, 10800, 1))
+    train_data = np.reshape(train_data, (-1, 2700, 4))
     indices = np.arange(len(train_data))
     indices = tf.random.shuffle(indices)
     shuffled_data = tf.gather(train_data, indices)
@@ -35,8 +35,8 @@ def train(model, train_data):
         step += 1
 
         #print(step, loss)
-        if step % 50 == 0:
-            print('%dth batches, \tAvg. loss: %.3f' % (step, curr_loss/step))
+        #if step % 50 == 0:
+        print('%dth batches, \tAvg. loss: %.3f' % (step, curr_loss/step))
     return curr_loss/step
 
 
