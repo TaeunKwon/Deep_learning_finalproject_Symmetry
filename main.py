@@ -3,11 +3,13 @@ import sys
 import numpy as np
 import tensorflow as tf
 from autoencoder import AutoEncoder
+from Cluster import clustering
 import time
 import preprocess as preprocess
 import visualization
+from sklearn.cluster import KMeans
 
-tf.enable_eager_execution()
+#tf.enable_eager_execution()
 
 def train(model, train_data):
     
@@ -61,15 +63,32 @@ def test(model, test_data):
     
     return curr_loss/step
 
+def train_cluster(model, train_data):
+    
+    train_data = tf.reshape(train_data, (-1, 1300,1))
+    
+    with tf.GradientTape() as tape:
+        q = model.call(train_data)
+        p = model.target_distribution(q)
+        
+        loss = model.loss_function(q, p)
+        
+    gradients = tape.gradient(loss, model.trainable_variables)
+    model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))    
+
+    print('loss: %.3f' % (loss))
+    return loss
+
 
 def main():
     pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 5000, 1000)
+  
     model = AutoEncoder()
     
     
     start = time.time()    
     
-    num_epochs = 10
+    num_epochs = 1
     curr_loss = 0
     epoch = 0
     for i in range(num_epochs):
@@ -90,6 +109,21 @@ def main():
     visualization.plot_1ch(test_data[25], tf.squeeze(model.call(tf.reshape(test_data[25], (1, 1300, 1)))).numpy())
 
     visualization.feature_v_proj(model, test_data, test_label)
+    
+    model_cluster = clustering(model.encoder)
+    kmeans = KMeans(n_clusters = 2, n_init = 20)
+    cluster_pred = kmeans.fit_predict(model.encoder(tf.reshape(pulse_data, (-1, 1300,1))))
+    model_cluster.cluster.set_weights([kmeans.cluster_centers_])
+    
+    num_iter = 10
+    iter_ = 0
+    
+    for i in range(num_iter):
+        print(iter_+1, 'th iteration:')
+        tot_loss = train_cluster(model_cluster, pulse_data)
+        iter_ += 1
+    
+    visualization.feature_v_proj(model_cluster, test_data, test_label)
 
 if __name__ == '__main__':
 	main()
