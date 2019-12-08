@@ -56,7 +56,7 @@ class Decoder(tf.keras.Model):
         #Hyperparameters
         #self.Dense_size1 = 100
         self.Dense_size2 = 100
-        self.Dense_size3 = 520#1300*2 #(/5 *10)
+        self.Dense_size3 = 520# =numSamples / pool_size1 * filter_size1
         
         self.filter_size1 = 2
         #self.filter_size2 = 4
