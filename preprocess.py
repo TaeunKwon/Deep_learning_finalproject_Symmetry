@@ -61,7 +61,7 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
         peakMax1 = peakMax1[:len_data_to_load].flatten()
         label = np.repeat(label[:len_data_to_load], numChannels)
     else:
-        data = np.reshape(np.transpose(data, (0,2,1)), (-1,2700))
+        data = np.reshape(data, (-1,2700))
         peakWhere1 = peakWhere1.flatten()
         peakMax1 = peakMax1.flatten()
         label = np.repeat(label, numChannels)
