@@ -28,7 +28,9 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     '''
     :param filename: name of file to load
     :return: train data array (size: numEvt x numSam ), train label array 
-             (length: numEvt), test data array, test label array
+             (length: numEvt), test data array, test label array,
+             corresponding event index and channel index.
+             
              Label is 1 if ch 0 and 1 have peak.
              Label is 2 if ch 0, 1, and 2 have peak.
              Label is 3 if ch 0, 1, 2, and 3 have peak.
@@ -40,6 +42,8 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     peakWhere1 = np.zeros((numEvents,numChannels), dtype = np.int16)
     peakMax1 = np.zeros((numEvents,numChannels), dtype = np.int16)
     label = np.zeros(numEvents, dtype = np.int16)
+    evt_ind = np.arange(numEvents)
+    ch_ind = np.arange(numChannels)
 
     for ievt in range(numEvents):
         maxInd, maxValue = find_peak1(data[ievt])
@@ -60,11 +64,14 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
         peakWhere1 = peakWhere1[:len_data_to_load].flatten()
         peakMax1 = peakMax1[:len_data_to_load].flatten()
         label = np.repeat(label[:len_data_to_load], numChannels)
+        evt_ind = np.repeat(evt_ind[:len_data_to_load], numChannels)
     else:
         data = np.reshape(data, (-1,2700))
         peakWhere1 = peakWhere1.flatten()
         peakMax1 = peakMax1.flatten()
         label = np.repeat(label, numChannels)
+        evt_ind = np.repeat(evt_ind, numChannels)
+    ch_ind = np.tile(ch_ind, len(evt_ind))
     
     #Get rid of zero events
     cut_thres = (peakWhere1 != 0)
@@ -72,7 +79,10 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     peakWhere1 = peakWhere1[cut_thres]
     peakMax1 = peakMax1[cut_thres]
     label = label[cut_thres]
+    evt_ind = evt_ind[cut_thres]
+    ch_ind = ch_ind[cut_thres]
     
+    # Normalization
     data = data / peakMax1[:,None]
                 
     if not len_data_to_load:
@@ -82,4 +92,4 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     else:
         num_test = int(np.ceil(len_data_to_load*0.01))
     
-    return data[num_test:len_data_to_load],label[num_test:len_data_to_load],data[:num_test],label[:num_test]
+    return data[num_test:len_data_to_load],label[num_test:len_data_to_load],data[:num_test],label[:num_test], evt_ind, ch_ind
