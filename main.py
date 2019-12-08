@@ -2,9 +2,9 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
-from autoencoder_1dtest import AutoEncoder
+from autoencoder import AutoEncoder
 import time
-import preprocess_1dtest as preprocess
+import preprocess as preprocess
 import visualization
 
 tf.enable_eager_execution()
