@@ -9,8 +9,9 @@ import preprocess as preprocess
 import visualization
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
+from lifetime import lifetime
 
-tf.enable_eager_execution()
+#tf.enable_eager_execution()
 
 def train(model, train_data):
     
@@ -71,30 +72,58 @@ def train_cluster(model, train_data, num_iter, p):
     train_data = tf.reshape(train_data, (-1, 1300,1))
     #shuffled_data = tf.gather(train_data, indices)
     
-                
+    curr_loss = 0
+    step = 0      
     for start, end in zip(range(0, len(train_data) - BSZ, BSZ), range(BSZ, len(train_data), BSZ)):
         with tf.GradientTape() as tape:
             q = model.call(train_data[start:end])
-            if (num_iter % 40 == 0):
+            encoded = model.autoencoder.call(train_data[start:end])
+            if (num_iter % 2 == 0):
                 if start == 0:
                     p = model.target_distribution(q)
                 else:
                     p = tf.concat([p, model.target_distribution(q)], axis = 0)
                     
-            loss = model.loss_function(q, p[start:end])
+            loss = model.loss_function(q, p[start:end], train_data[start:end], encoded)
         gradients = tape.gradient(loss, model.trainable_variables)        
-        model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))    
+        model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))  
+        
+        curr_loss += loss/BSZ
+        step += 1 
+        
+        if step % 10 == 0:
+            print('%dth batches, \tAvg. loss: %.3f' % (step, loss/BSZ))
 
-    return loss, p
+    return curr_loss/step, p
 
+def lifetime_calc(model, train_data, evt_ind):
+    BSZ = model.batch_size
+    
+    for start, end in zip(range(0, len(train_data) - BSZ, BSZ), range(BSZ, len(train_data), BSZ)):
+        if start == 0:
+            q = model.call(train_data[start:end])
+        else:
+            q = tf.concat([q, model.call(train_data[start:end])], axis = 0)
+    q = tf.concat([q, model.call(train_data[end:])], axis = 0)
+    
+    ind = tf.argmax(q, axis = 1)
+    
+    visualization.feature_v_proj(model.autoencoder.encoder, train_data, ind)
+    
+    cluster1 = evt_ind[-len(ind):][ind == 1]
+    cluster2 = evt_ind[-len(ind):][ind == 0]
+    
+    lifetime("../testData11_14bit_100mV.npy", cluster1)
+    lifetime("../testData11_14bit_100mV.npy", cluster2)
+    
 
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in {"autoencoder", "cluster"}:
+    if len(sys.argv) != 2 or sys.argv[1] not in {"autoencoder", "cluster", "lifetime"}:
         print("USAGE: python main.py <Model Type>")
         print("<Model Type>: [autoencoder/cluster]")
-        exit()
+        return
     
-    pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 5000, 1000)
+    pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy")
   
     model = AutoEncoder()
     checkpoint_dir = './checkpoint'
@@ -105,7 +134,7 @@ def main():
     if sys.argv[1] == "autoencoder":
         start = time.time()    
         
-        num_epochs = 20
+        num_epochs = 1
         curr_loss = 0
         epoch = 0
         for i in range(num_epochs):
@@ -120,36 +149,49 @@ def main():
         print("Saving Checkpoint...")
         manager.save()
         
-        #visualization.plot_1evt(pulse_data[733], tf.squeeze(model.call(tf.reshape(pulse_data[733], (1, 1300, 4)))).numpy())
         visualization.plot_1ch(test_data[7], tf.squeeze(model.call(tf.reshape(test_data[7], (1, 1300, 1)))).numpy())
-        #visualization.plot_1ch(test_data[33], tf.squeeze(model.call(tf.reshape(test_data[33], (1, 1300, 1)))).numpy())
-        #visualization.plot_1ch(test_data[46], tf.squeeze(model.call(tf.reshape(test_data[46], (1, 1300, 1)))).numpy())
-        #visualization.plot_1ch(test_data[25], tf.squeeze(model.call(tf.reshape(test_data[25], (1, 1300, 1)))).numpy())
+        visualization.plot_1ch(test_data[33], tf.squeeze(model.call(tf.reshape(test_data[33], (1, 1300, 1)))).numpy())
+        visualization.plot_1ch(test_data[46], tf.squeeze(model.call(tf.reshape(test_data[46], (1, 1300, 1)))).numpy())
+        visualization.plot_1ch(test_data[25], tf.squeeze(model.call(tf.reshape(test_data[25], (1, 1300, 1)))).numpy())
         visualization.feature_v_proj(model, test_data, test_label)
     
     elif sys.argv[1] == "cluster":
         checkpoint.restore(manager.latest_checkpoint)
-        visualization.feature_v_proj(model, test_data, test_label)
+        visualization.feature_v_proj(model.encoder, test_data, test_label)
 
-    model_cluster = clustering(model.encoder)
-    kmeans = KMeans(n_clusters = 3, n_init = 20)
-    cluster_pred = kmeans.fit_predict(model.encoder(tf.reshape(pulse_data, (-1, 1300,1))))
-    model_cluster.cluster.set_weights([kmeans.cluster_centers_])
-    
-    num_iter = 200
-    cnt_iter = 0
-    
-    p = None
-    
-    for i in range(num_iter):
-        print(cnt_iter+1, 'th iteration:')
-        tot_loss, p = train_cluster(model_cluster, pulse_data, cnt_iter, p)
-        cnt_iter += 1
-        prbs = model_cluster.cluster.call(model_cluster.encoder.call(tf.reshape(pulse_data, (-1, 1300,1))))
-        plt.scatter(prbs[:, 0], prbs[:, 1], s = 4, c=label)
-        plt.show()
+    model_cluster = clustering(model)
+    checkpoint_dir_cluster = './checkpoint_cluster'
+    checkpoint_cluster = tf.train.Checkpoint(model = model_cluster)
+    manager_cluster = tf.train.CheckpointManager(checkpoint_cluster, checkpoint_dir_cluster, max_to_keep=3)
+
+    if sys.argv[1] == "cluster":   
+        kmeans = KMeans(n_clusters = 3, n_init = 20)
+        cluster_pred = kmeans.fit_predict(model_cluster.autoencoder.encoder(tf.reshape(pulse_data[:10000], (-1, 1300,1))))
+        model_cluster.cluster.set_weights([kmeans.cluster_centers_])
         
-    visualization.feature_v_proj(model_cluster, test_data, test_label)
+        num_iter = 10
+        cnt_iter = 0
+        
+        p = None
+        
+        for i in range(num_iter):
+            print(cnt_iter+1, 'th iteration:')
+            tot_loss, p = train_cluster(model_cluster, pulse_data, cnt_iter, p)
+            cnt_iter += 1
+            prbs = model_cluster.call(tf.cast(tf.reshape(pulse_data[:10000], (-1, 1300,1)), dtype = tf.float32))
+            ind = tf.argmax(prbs, axis = 1)
+            visualization.feature_v_proj(model_cluster.autoencoder.encoder, pulse_data[:10000], ind)
+        
+        
+        
+        visualization.feature_v_proj(model_cluster.autoencoder.encoder, test_data, test_label)
+        print("Saving Checkpoint...")
+        manager_cluster.save()
+    
+    elif sys.argv[1] == "lifetime":
+        checkpoint.restore(manager.latest_checkpoint)
+        checkpoint_cluster.restore(manager_cluster.latest_checkpoint)
+        lifetime_calc(model_cluster, pulse_data, evt_ind)
     
 if __name__ == '__main__':
 	main()

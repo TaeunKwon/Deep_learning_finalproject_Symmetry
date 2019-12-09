@@ -15,7 +15,7 @@ class cluster(tf.keras.layers.Layer):
         assert len(input_shape) == 2
         
         input_dim = input_shape[1]
-        self.clusters = self.add_weight(shape = (self.n_clusters, input_dim), initializer='random_normal', trainable = True)
+        self.clusters = self.add_weight(shape = (self.n_clusters, input_dim), initializer='random_normal', trainable = True, name = "clusters")
         if self.centroid_weights is not None:
             self.set_weights(self.centroid_weights)
             del self.centroid_weights
@@ -29,13 +29,13 @@ class cluster(tf.keras.layers.Layer):
         return q
     
 class clustering(tf.keras.Model):
-    def __init__(self, encoder):
+    def __init__(self, autoencoder):
         super(clustering, self).__init__()
-        self.batch_size = 2000
-        self.learning_rate = 0.005
+        self.batch_size = 1000
+        self.learning_rate = 0.001
         self.n_clusters = 3
         
-        self.encoder = encoder
+        self.autoencoder = autoencoder
         self.cluster = cluster(n_clusters = self.n_clusters)
         self.cluster.build([None, 100])
         
@@ -44,15 +44,18 @@ class clustering(tf.keras.Model):
     #@tf.function
     def call(self, pulses):
         #print('autoencoder call function')
-        return self.cluster.call(self.encoder.call(pulses))
+        return self.cluster.call(self.autoencoder.encoder(pulses))
     
     def target_distribution(self, q):
         weight = q**2 /tf.math.reduce_sum(q, axis = 0)
         return tf.transpose((tf.transpose(weight) / tf.math.reduce_sum(weight, axis = 1)))
     
     #@tf.function
-    def loss_function(self, q, p):
+    def loss_function(self, q, p, originals, encoded):
       #Q = tf.distributions.Categorical(probs = q)
       #P = tf.distributions.Categorical(probs = q)
       #return tf.distributions.kl_divergence(Q,P)
-      return tf.reduce_sum(p*tf.math.log(p/q))#*tf.math.square(tf.dtypes.cast(tf.reduce_sum(tf.math.argmin(q, axis = 1)), dtype = tf.float32) - q.shape[0]/2)
+      encoded = tf.dtypes.cast(encoded, tf.float32)
+      originals = tf.dtypes.cast(originals, tf.float32)
+      
+      return tf.reduce_sum(p*tf.math.log(p/q)) + tf.reduce_sum((originals - encoded)*(originals - encoded))

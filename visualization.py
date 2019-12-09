@@ -39,12 +39,12 @@ def plot_1ch(en_input, de_output):
     
     plt.show()
     
-def feature_v_proj(model, data, label):
+def feature_v_proj(encoder, data, label):
     NUM_SAMPLES = min(1000, len(label))
 
     t_data = data[:NUM_SAMPLES]
     t_labels = label[:NUM_SAMPLES]
-    z = model.encoder.call(np.reshape(t_data, (-1,1300,1)))
+    z = encoder.call(np.reshape(t_data, (-1,1300,1)))
     
     tsne = TSNE(n_components=2)
     #tsne = TSNE(n_components=1)
