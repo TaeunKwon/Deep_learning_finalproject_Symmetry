@@ -23,19 +23,37 @@ class cluster(tf.keras.layers.Layer):
         
     #@tf.function
     def call(self, inputs):
-        q = 1.0 / (1.0 + (tf.math.reduce_sum(tf.math.square(tf.expand_dims(inputs, axis=1) - self.clusters), axis=2) / self.alpha))
+        
+        q = 1.0 / (1.0 + ( self.siml(inputs)/ self.alpha))
         q **= (self.alpha + 1.0) / 2.0
         q = tf.transpose(tf.transpose(q) / tf.math.reduce_sum(q, axis=1)) # Make sure each sample's 10 values add up to 1.
         return q
     
+    def siml(self, inputs):
+        complexity_input = tf.math.sqrt(tf.reduce_sum(tf.square(inputs[:, 1:] - inputs[:, :-1]), axis = 1))
+        complexity_cent = tf.math.sqrt(tf.reduce_sum(tf.square(self.clusters[:, 1:] - self.clusters[:, :-1]), axis = 1))
+        
+        complexity_factor = tf.zeros((len(inputs), self.n_clusters))
+        
+        C_input, C_cent = tf.meshgrid(complexity_input, complexity_cent)
+        
+        
+        complexity_factor = tf.transpose(tf.keras.backend.maximum(C_input, C_cent)/tf.keras.backend.minimum(C_input, C_cent))
+            
+        euclidean = tf.math.sqrt(tf.math.reduce_sum(tf.math.square(tf.expand_dims(inputs, axis=1) - self.clusters), axis=2))
+        
+        return euclidean*complexity_factor
+        
+    
 class clustering(tf.keras.Model):
-    def __init__(self, autoencoder):
+    def __init__(self, encoder):
         super(clustering, self).__init__()
         self.batch_size = 1000
-        self.learning_rate = 0.001
-        self.n_clusters = 3
+        self.learning_rate = 0.00001
+        self.n_clusters = 2
         
-        self.autoencoder = autoencoder
+        self.encoder = encoder
+        
         self.cluster = cluster(n_clusters = self.n_clusters)
         self.cluster.build([None, 100])
         
@@ -44,18 +62,16 @@ class clustering(tf.keras.Model):
     #@tf.function
     def call(self, pulses):
         #print('autoencoder call function')
-        return self.cluster.call(self.autoencoder.encoder(pulses))
+        return self.cluster.call(self.encoder(pulses))
     
     def target_distribution(self, q):
         weight = q**2 /tf.math.reduce_sum(q, axis = 0)
         return tf.transpose((tf.transpose(weight) / tf.math.reduce_sum(weight, axis = 1)))
     
     #@tf.function
-    def loss_function(self, q, p, originals, encoded):
+    def loss_function(self, q, p):
       #Q = tf.distributions.Categorical(probs = q)
       #P = tf.distributions.Categorical(probs = q)
       #return tf.distributions.kl_divergence(Q,P)
-      encoded = tf.dtypes.cast(encoded, tf.float32)
-      originals = tf.dtypes.cast(originals, tf.float32)
       
-      return tf.reduce_sum(p*tf.math.log(p/q)) + tf.reduce_sum((originals - encoded)*(originals - encoded))
+      return tf.reduce_sum(p*tf.math.log(p/q))
