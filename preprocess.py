@@ -60,14 +60,14 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     
     #Flatten           
     if len_data_to_load:
-        data = np.reshape(data[:len_data_to_load], (-1,2700))
+        data = np.reshape(data[:len_data_to_load], (-1,2700,1))
         peakWhere1 = peakWhere1[:len_data_to_load].flatten()
         peakMax1 = peakMax1[:len_data_to_load].flatten()
         label = np.repeat(label[:len_data_to_load], numChannels)
         evt_ind = np.repeat(evt_ind[:len_data_to_load], numChannels)
         ch_ind = np.tile(ch_ind, len_data_to_load)
     else:
-        data = np.reshape(data, (-1,2700))
+        data = np.reshape(data, (-1,2700,1))
         peakWhere1 = peakWhere1.flatten()
         peakMax1 = peakMax1.flatten()
         label = np.repeat(label, numChannels)
@@ -85,7 +85,7 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     ch_ind = ch_ind[cut_thres]
     
     # Normalization
-    data = data / peakMax1[:,None]
+    data = data / peakMax1[:,None,None]
                 
     if not len_data_to_load:
         len_data_to_load = len(label)

@@ -10,7 +10,7 @@ import visualization
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 
-#tf.enable_eager_execution()
+tf.enable_eager_execution()
 
 def train(model, train_data):
     
@@ -18,7 +18,6 @@ def train(model, train_data):
     
     indices = np.arange(len(train_data))
     indices = tf.random.shuffle(indices)
-    train_data = tf.reshape(train_data, (-1, 1300,1))
     shuffled_data = tf.gather(train_data, indices)
     
     curr_loss = 0
@@ -45,8 +44,6 @@ def train(model, train_data):
     return curr_loss/step
 
 def test(model, test_data):
-    test_data = tf.reshape(test_data, (-1, 1300,1))
-
     #encoded = model.call(test_data)
     #loss = model.loss_function(encoded, test_data)
     BSZ = model.batch_size
@@ -92,37 +89,48 @@ def train_cluster(model, train_data, num_iter, p):
 
 
 def main():
+    if len(sys.argv) != 2 or sys.argv[1] not in {"autoencoder", "cluster"}:
+        print("USAGE: python main.py <Model Type>")
+        print("<Model Type>: [autoencoder/cluster]")
+        exit()
+    
     pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 5000, 1000)
   
     model = AutoEncoder()
+    checkpoint_dir = './checkpoint'
+    checkpoint = tf.train.Checkpoint(model = model)
+    manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, max_to_keep=3)
     
     
-    start = time.time()    
-    
-    num_epochs = 1
-    curr_loss = 0
-    epoch = 0
-    for i in range(num_epochs):
-        print(epoch+1, 'th epoch:')
-        tot_loss = train(model, pulse_data)
-        curr_loss += tot_loss
-        epoch += 1
-        #print('%dth epochs, \tloss: %.3f' % (epoch, curr_loss / epoch))
+    if sys.argv[1] == "autoencoder":
+        start = time.time()    
         
-    print("Test loss:", test(model, test_data))
+        num_epochs = 20
+        curr_loss = 0
+        epoch = 0
+        for i in range(num_epochs):
+            print(epoch+1, 'th epoch:')
+            tot_loss = train(model, pulse_data)
+            curr_loss += tot_loss
+            epoch += 1
+            #print('%dth epochs, \tloss: %.3f' % (epoch, curr_loss / epoch))
+            
+        print("Test loss:", test(model, test_data))
+        print("Process time : {} s".format(int(time.time() - start)))
+        print("Saving Checkpoint...")
+        manager.save()
+        
+        #visualization.plot_1evt(pulse_data[733], tf.squeeze(model.call(tf.reshape(pulse_data[733], (1, 1300, 4)))).numpy())
+        visualization.plot_1ch(test_data[7], tf.squeeze(model.call(tf.reshape(test_data[7], (1, 1300, 1)))).numpy())
+        #visualization.plot_1ch(test_data[33], tf.squeeze(model.call(tf.reshape(test_data[33], (1, 1300, 1)))).numpy())
+        #visualization.plot_1ch(test_data[46], tf.squeeze(model.call(tf.reshape(test_data[46], (1, 1300, 1)))).numpy())
+        #visualization.plot_1ch(test_data[25], tf.squeeze(model.call(tf.reshape(test_data[25], (1, 1300, 1)))).numpy())
+        visualization.feature_v_proj(model, test_data, test_label)
     
-    print("Process time : {} s".format(int(time.time() - start)))
-    
-    #visualization.plot_1evt(pulse_data[733], tf.squeeze(model.call(tf.reshape(pulse_data[733], (1, 1300, 4)))).numpy())
-    visualization.plot_1ch(test_data[7], tf.squeeze(model.call(tf.reshape(test_data[7], (1, 1300, 1)))).numpy())
-    visualization.plot_1ch(test_data[33], tf.squeeze(model.call(tf.reshape(test_data[33], (1, 1300, 1)))).numpy())
-    visualization.plot_1ch(test_data[46], tf.squeeze(model.call(tf.reshape(test_data[46], (1, 1300, 1)))).numpy())
-    visualization.plot_1ch(test_data[25], tf.squeeze(model.call(tf.reshape(test_data[25], (1, 1300, 1)))).numpy())
+    elif sys.argv[1] == "cluster":
+        checkpoint.restore(manager.latest_checkpoint)
+        visualization.feature_v_proj(model, test_data, test_label)
 
-    visualization.feature_v_proj(model, test_data, test_label)
-    #visualization.feature_v_proj(model, test_data, test_label)
-    #visualization.feature_v_proj(model, test_data, test_label)
-    
     model_cluster = clustering(model.encoder)
     kmeans = KMeans(n_clusters = 3, n_init = 20)
     cluster_pred = kmeans.fit_predict(model.encoder(tf.reshape(pulse_data, (-1, 1300,1))))
@@ -141,9 +149,8 @@ def main():
         plt.scatter(prbs[:, 0], prbs[:, 1], s = 4, c=label)
         plt.show()
         
-    
     visualization.feature_v_proj(model_cluster, test_data, test_label)
-
+    
 if __name__ == '__main__':
 	main()
 
