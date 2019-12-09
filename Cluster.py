@@ -30,26 +30,22 @@ class cluster(tf.keras.layers.Layer):
         return q
     
     def siml(self, inputs):
-        complexity_input = tf.math.sqrt(tf.reduce_sum(tf.square(inputs[:, 1:] - inputs[:, :-1]), axis = 1))
-        complexity_cent = tf.math.sqrt(tf.reduce_sum(tf.square(self.clusters[:, 1:] - self.clusters[:, :-1]), axis = 1))
+        #complexity_input = tf.math.sqrt(tf.reduce_sum(tf.square(inputs[:, 1:] - inputs[:, :-1]), axis = 1))
+        #complexity_cent = tf.math.sqrt(tf.reduce_sum(tf.square(self.clusters[:, 1:] - self.clusters[:, :-1]), axis = 1))   
+        #complexity_factor = tf.zeros((len(inputs), self.n_clusters))
+        #C_input, C_cent = tf.meshgrid(complexity_cent, complexity_input)
+        #complexity_factor = tf.keras.backend.maximum(C_input, C_cent)/tf.keras.backend.minimum(C_input, C_cent)
         
-        complexity_factor = tf.zeros((len(inputs), self.n_clusters))
-        
-        C_input, C_cent = tf.meshgrid(complexity_input, complexity_cent)
-        
-        
-        complexity_factor = tf.transpose(tf.keras.backend.maximum(C_input, C_cent)/tf.keras.backend.minimum(C_input, C_cent))
-            
         euclidean = tf.math.sqrt(tf.math.reduce_sum(tf.math.square(tf.expand_dims(inputs, axis=1) - self.clusters), axis=2))
         
-        return euclidean*complexity_factor
+        return euclidean#*complexity_factor
         
     
 class clustering(tf.keras.Model):
     def __init__(self, encoder):
         super(clustering, self).__init__()
         self.batch_size = 1000
-        self.learning_rate = 0.00001
+        self.learning_rate = 1e-6#0.00001
         self.n_clusters = 2
         
         self.encoder = encoder
