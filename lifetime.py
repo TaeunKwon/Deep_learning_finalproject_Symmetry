@@ -9,7 +9,7 @@ def find_peak2(b): # b is (2700, ) array
     numSamples = len(b)
     for i in range(220, numSamples - 5):
         # Scanning a block of 10 samples. If there is a huge jump:
-        if max(b[i-5:i+5])-min(b[i-5:i+5]) > 100:
+        if max(b[i-5:i+5])-min(b[i-5:i+5]) > 500:
             maxInd = np.argmax(b[i:min(i+50, numSamples)]) +i
             return maxInd
     return 0

@@ -23,6 +23,8 @@ def plot_1evt(en_input, de_output):
     
     ax[3].set_xlabel('time [8 ns]')
     
+    plt.show()
+    
 def plot_1ch(en_input, de_output):
     '''
     Plot encoder input and decoder output

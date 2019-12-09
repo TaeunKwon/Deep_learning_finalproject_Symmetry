@@ -105,7 +105,7 @@ def main():
     if sys.argv[1] == "autoencoder":
         start = time.time()    
         
-        num_epochs = 20
+        num_epochs = 10#20
         curr_loss = 0
         epoch = 0
         for i in range(num_epochs):
@@ -136,7 +136,7 @@ def main():
     cluster_pred = kmeans.fit_predict(model.encoder(tf.reshape(pulse_data, (-1, 1300,1))))
     model_cluster.cluster.set_weights([kmeans.cluster_centers_])
     
-    num_iter = 200
+    num_iter = 10#200
     cnt_iter = 0
     
     p = None

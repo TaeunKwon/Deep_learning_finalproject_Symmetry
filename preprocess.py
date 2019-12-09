@@ -86,6 +86,7 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     
     # Normalization
     data = data / peakMax1[:,None,None]
+    data = data.astype(np.float32)
                 
     if not len_data_to_load:
         len_data_to_load = len(label)
