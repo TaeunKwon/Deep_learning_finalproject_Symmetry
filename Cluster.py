@@ -32,12 +32,12 @@ class clustering(tf.keras.Model):
     def __init__(self, encoder):
         super(clustering, self).__init__()
         self.batch_size = 100
-        self.learning_rate = 0.001
-        self.n_clusters = 2
+        self.learning_rate = 0.005
+        self.n_clusters = 3
         
         self.encoder = encoder
-        self.cluster = cluster(n_clusters = 2)
-        self.cluster.build([None, 50])
+        self.cluster = cluster(n_clusters = self.n_clusters)
+        self.cluster.build([None, 100])
         
         self.optimizer =  tf.keras.optimizers.Adam(self.learning_rate)
         
@@ -55,4 +55,4 @@ class clustering(tf.keras.Model):
       #Q = tf.distributions.Categorical(probs = q)
       #P = tf.distributions.Categorical(probs = q)
       #return tf.distributions.kl_divergence(Q,P)
-      return tf.reduce_sum(p*tf.math.log(p/q))
+      return tf.reduce_sum(p*tf.math.log(p/q))#*tf.math.square(tf.dtypes.cast(tf.reduce_sum(tf.math.argmin(q, axis = 1)), dtype = tf.float32) - q.shape[0]/2)
