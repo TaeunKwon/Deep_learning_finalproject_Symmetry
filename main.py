@@ -8,6 +8,7 @@ import time
 import preprocess as preprocess
 import visualization
 from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
 
 tf.enable_eager_execution()
 
@@ -28,7 +29,7 @@ def train(model, train_data):
         with tf.GradientTape() as tape:
             encoded = model.call(shuffled_data[start:end])
             #print("encoding done with ", encoded.get_shape())
-            loss = model.loss_function(encoded, train_data[start:end])
+            loss = model.loss_function(encoded, shuffled_data[start:end])
         
         curr_loss += loss/BSZ
         step += 1
@@ -60,18 +61,29 @@ def test(model, test_data):
     
     return curr_loss/step
 
-def train_cluster(model, train_data):
+def train_cluster(model, train_data, train_label):
     
-    with tf.GradientTape() as tape:
-        q = model.call(train_data)
-        p = model.target_distribution(q)
+    num_iter = 200
+    iter_ = 0
+    
+    for i in range(num_iter):
+        print(iter_+1, 'th iteration:')
+        with tf.GradientTape() as tape:
+            q = model.call(train_data)
+            if (iter_ % 40 == 0):
+                p = model.target_distribution(q)
         
-        loss = model.loss_function(q, p)
+            loss = model.loss_function(q, p)
         
-    gradients = tape.gradient(loss, model.trainable_variables)
-    model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))    
+        gradients = tape.gradient(loss, model.trainable_variables)
+        model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))    
 
-    print('loss: %.3f' % (loss))
+        print('loss: %.3f' % (loss))
+        iter_ += 1
+        
+        plt.scatter(q[:, 0], q[:, 1], s = 4, c=train_label)
+        plt.show()
+        
     return loss
 
 
@@ -91,7 +103,7 @@ def main():
     if sys.argv[1] == "autoencoder":
         start = time.time()    
         
-        num_epochs = 10
+        num_epochs = 20
         curr_loss = 0
         epoch = 0
         for i in range(num_epochs):
@@ -116,22 +128,25 @@ def main():
     elif sys.argv[1] == "cluster":
         checkpoint.restore(manager.latest_checkpoint)
         visualization.feature_v_proj(model, test_data, test_label)
-    '''
+
     model_cluster = clustering(model.encoder)
-    kmeans = KMeans(n_clusters = 2, n_init = 20)
+    kmeans = KMeans(n_clusters = 3, n_init = 20)
     cluster_pred = kmeans.fit_predict(model.encoder(tf.reshape(pulse_data, (-1, 1300,1))))
     model_cluster.cluster.set_weights([kmeans.cluster_centers_])
     
-    num_iter = 10
-    iter_ = 0
-    
-    for i in range(num_iter):
-        print(iter_+1, 'th iteration:')
-        tot_loss = train_cluster(model_cluster, pulse_data)
-        iter_ += 1
+    #num_iter = 50
+    #iter_ = 0
+    tot_loss = train_cluster(model_cluster, pulse_data, label)
+    #for i in range(num_iter):
+    #    print(iter_+1, 'th iteration:')
+        
+    #    iter_ += 1
+        
+    #    prbs = model_cluster.cluster.call(model_cluster.encoder.call(tf.reshape(pulse_data, (-1, 1300,1))))
+    #    plt.scatter(prbs[:, 0], prbs[:, 1], s = 4, c=label)
+     #   plt.show()
     
     visualization.feature_v_proj(model_cluster, test_data, test_label)
-    '''
     
 if __name__ == '__main__':
 	main()
