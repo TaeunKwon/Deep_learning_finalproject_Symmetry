@@ -63,7 +63,7 @@ def test(model, test_data):
 
 def train_cluster(model, train_data, train_label):
     
-    num_iter = 200
+    num_iter = 10#200
     iter_ = 0
     
     for i in range(num_iter):

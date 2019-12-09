@@ -30,7 +30,7 @@ def lifetime(filename, muon_evt_ind):
     delta_t = (peakWhere2 - peakWhere1) * dt
 
     plt.figure(1)
-    hist, bin_edge, patch = plt.hist(delta_t, bins = 20, label = 'data', histtype = 'step')
+    hist, bin_edge, patch = plt.hist(delta_t, bins = 20, range = (0.0,20.0), label = 'data', histtype = 'step')
     
     bin_center = (bin_edge[1:]+bin_edge[:-1])/2
     

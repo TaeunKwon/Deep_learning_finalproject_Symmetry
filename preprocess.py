@@ -94,4 +94,4 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     else:
         num_test = int(np.ceil(len_data_to_load*0.01))
     
-    return data[num_test:len_data_to_load],label[num_test:len_data_to_load],data[:num_test],label[:num_test], evt_ind, ch_ind
+    return data[num_test:],label[num_test:],data[:num_test],label[:num_test], evt_ind, ch_ind

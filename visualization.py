@@ -59,4 +59,18 @@ def feature_v_proj(model, data, label):
     plt.colorbar()
     #plt.legend()
     plt.show()
-        
+    
+def feature_v_proj_v2(encoded, label1, label2):
+    z = encoded
+    
+    tsne = TSNE(n_components=2)
+    #tsne = TSNE(n_components=1)
+    transformed = tsne.fit_transform(z)
+    plt.scatter(transformed[:, 0], transformed[:, 1], c=label1, s = 4)
+    plt.colorbar()
+    plt.show()
+    
+    plt.scatter(transformed[:, 0], transformed[:, 1], c=label2, s = 4)
+    plt.colorbar()
+    plt.show()
+            
