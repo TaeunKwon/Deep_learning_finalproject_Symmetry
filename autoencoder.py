@@ -118,7 +118,7 @@ class AutoEncoder(tf.keras.Model):
     def __init__(self):
         super(AutoEncoder, self).__init__()
         self.batch_size = 100
-        self.learning_rate = 0.00001
+        self.learning_rate = 1e-7#0.0000001
         
         self.encoder = Encoder()
         self.decoder = Decoder()
