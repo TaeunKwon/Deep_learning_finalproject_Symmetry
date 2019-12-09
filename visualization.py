@@ -47,9 +47,16 @@ def feature_v_proj(model, data, label):
     z = model.encoder.call(np.reshape(t_data, (-1,1300,1)))
     
     tsne = TSNE(n_components=2)
+    #tsne = TSNE(n_components=1)
     transformed = tsne.fit_transform(z)
     colors = t_labels
     plt.scatter(transformed[:, 0], transformed[:, 1], c=colors, s = 4)
+    #plt.hist(transformed[:, 0], bins = 20, histtype = 'step')
+    #plt.hist(transformed[:, 0][colors==0], bins = 20, histtype = 'step', label='0')
+    #plt.hist(transformed[:, 0][colors==1], bins = 20, histtype = 'step', label='1')
+    #plt.hist(transformed[:, 0][colors==2], bins = 20, histtype = 'step', label='2')
+    #plt.hist(transformed[:, 0][colors==3], bins = 20, histtype = 'step', label='3')
     plt.colorbar()
+    #plt.legend()
     plt.show()
         
