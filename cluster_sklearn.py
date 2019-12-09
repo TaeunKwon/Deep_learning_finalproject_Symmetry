@@ -42,10 +42,8 @@ def cluster_sklearn():
     checkpoint.restore(manager.latest_checkpoint)
     
     encoded = np.zeros([len(test_data),100])
-    
-    #np.save("./results/encoded_50000evts.npy",encoded)
-    
     test(model, test_data, encoded)
+    #np.save("./results/encoded_50000evts.npy",encoded)
     
     transformed = TSNE(n_components=2).fit_transform(encoded)
     #transformed_nD = TSNE(n_components=4).fit_transform(encoded)
@@ -70,7 +68,7 @@ def cluster_sklearn():
     #plt.colorbar()
     #plt.show()
     
-    np.save("./results/transformed.npy",transformed)
+    #np.save("./results/transformed.npy",transformed)
     
 if __name__ == '__main__':
 	cluster_sklearn()

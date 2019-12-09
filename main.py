@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from lifetime import lifetime
 
-#tf.enable_eager_execution()
+tf.enable_eager_execution()
 
 def train(model, train_data):
     
@@ -165,7 +165,7 @@ def main():
     manager_cluster = tf.train.CheckpointManager(checkpoint_cluster, checkpoint_dir_cluster, max_to_keep=3)
 
     if sys.argv[1] == "cluster":   
-        kmeans = KMeans(n_clusters = 3, n_init = 20)
+        kmeans = KMeans(n_clusters = 2, n_init = 20)
         cluster_pred = kmeans.fit_predict(model_cluster.autoencoder.encoder(tf.reshape(pulse_data[:10000], (-1, 1300,1))))
         model_cluster.cluster.set_weights([kmeans.cluster_centers_])
         
