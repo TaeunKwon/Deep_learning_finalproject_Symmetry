@@ -87,7 +87,6 @@ def train_cluster(model, model_auto, train_data, num_iter, p, ch_ind, delta_t):
             #if (num_iter % 3 == 0):
                     
             loss_cluster = model.loss_function(q, p[start:end],shuffled_delta_t[start:end], shuffled_ch_ind[start:end], alpha = 1.5)
-=======
             loss_auto = model_auto.loss_function(encoded, shuffled_data[start:end])
             
             p = model.target_distribution(q)

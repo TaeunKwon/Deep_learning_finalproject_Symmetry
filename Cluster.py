@@ -51,7 +51,7 @@ class clustering(tf.keras.Model):
         self.encoder = encoder
         
         self.cluster = cluster(n_clusters = self.n_clusters)
-        self.cluster.build([None, 200])
+        self.cluster.build([None, 10])
         
         self.optimizer =  tf.keras.optimizers.Adam(self.learning_rate)
         
