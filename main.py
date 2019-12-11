@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from lifetime import lifetime
 
-#tf.enable_eager_execution()
+tf.enable_eager_execution()
 
 def train(model, train_data):
     

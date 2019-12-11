@@ -119,5 +119,5 @@ def get_data(filename ='../testData11_14bit_100mV.npy', len_data_to_load = 0, le
         num_test = int(np.ceil(len_data_to_load*0.01))
     
     #save_delta_t('../testData11_14bit_100mV_reduced.npz', evt_ind[num_test:], evt_ind[:num_test])
-    
+   
     return data[num_test:],label[num_test:],data[:num_test],label[:num_test], evt_ind[num_test:], evt_ind[:num_test], ch_ind[num_test:], ch_ind[:num_test]
