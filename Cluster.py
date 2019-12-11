@@ -46,7 +46,7 @@ class clustering(tf.keras.Model):
         super(clustering, self).__init__()
         self.batch_size = 1000
         self.learning_rate = 1e-6#0.00001
-        self.n_clusters = 2
+        self.n_clusters = 3
         
         self.encoder = encoder
         

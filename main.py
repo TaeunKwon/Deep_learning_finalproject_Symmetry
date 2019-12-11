@@ -90,7 +90,7 @@ def train_cluster(model, model_auto, train_data, num_iter, p, ch_ind, delta_t):
                     p = model.target_distribution(q)
                 else:
                     p = tf.concat([p, model.target_distribution(q)], axis = 0)
-            loss_cluster = model.loss_function(q, p[start:end],shuffled_delta_t[start:end], shuffled_ch_ind[start:end], alpha = 1.5)
+            loss_cluster = model.loss_function(q, p[start:end],shuffled_delta_t[start:end], shuffled_ch_ind[start:end], alpha = 5.0)
 
             if (num_iter % 5) == 0:
                 encoded = model_auto.call(shuffled_data[start:end])
@@ -114,7 +114,7 @@ def train_cluster(model, model_auto, train_data, num_iter, p, ch_ind, delta_t):
             
         if (num_iter % 5) == 0:
             p = tf.concat([p, model.target_distribution(q)], axis = 0)
-        loss_cluster = model.loss_function(q, p[end:])
+        loss_cluster = model.loss_function(q, p[end:], shuffled_delta_t[end:], shuffled_ch_ind[end:], alpha = 5.0)
             
         if (num_iter % 5) == 0:
             encoded = model_auto.call(shuffled_data[end:])  
@@ -162,7 +162,7 @@ def main():
         print("<Model Type>: [autoencoder/cluster]")
         return
     
-    pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 21000, 1000)
+    pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy")
     delta_t_origin = preprocess.get_delta_t("../testData11_14bit_100mV_reduced.npz")
     train_delta_t = delta_t_origin[train_evt_ind, train_ch_ind]
     test_delta_t = delta_t_origin[test_evt_ind, test_ch_ind]
