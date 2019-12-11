@@ -31,7 +31,7 @@ def test(model, test_data, encoded):
 
 
 def cluster_sklearn():    
-    pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 50010, 50000)
+    pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 10010, 10000)
     #pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../muon_data_14bit_2.npy", 5500, 5000)
     visualization.plot_1evt(test_data[0], test_data[0])
     
@@ -41,7 +41,7 @@ def cluster_sklearn():
     manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, max_to_keep=3)
     checkpoint.restore(manager.latest_checkpoint)
     
-    encoded = np.zeros([len(test_data),100])
+    encoded = np.zeros([len(test_data),200])
     test(model, test_data, encoded)
     #np.save("./results/encoded_50000evts.npy",encoded)
     
