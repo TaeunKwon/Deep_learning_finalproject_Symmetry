@@ -13,8 +13,8 @@ class Encoder(tf.keras.Model):
         self.filter_size2 = 4
         #self.filter_size3 = 8
         
-        self.kernel_size1 = 10
-        self.kernel_size2 = 10
+        self.kernel_size1 = 5
+        self.kernel_size2 = 5
         #self.kernel_size3 = 10
         
         self.stride1 = 1
@@ -23,8 +23,8 @@ class Encoder(tf.keras.Model):
         
         self.pool_size1 = 2
         
-        self.Dense_size1 = 520
-        self.Dense_size2 = 100
+        self.Dense_size1 = 700
+        self.Dense_size2 = 200
         #self.Dense_size3 = 100
         
         #Layers
@@ -60,7 +60,7 @@ class Decoder(tf.keras.Model):
         super(Decoder, self).__init__()
         
         #Hyperparameters
-        self.Dense_size1 = 520
+        self.Dense_size1 = 700
         self.Dense_size2 = 1300
         #self.Dense_size3 = 520# =numSamples / pool_size1 * filter_size1
         
@@ -68,9 +68,9 @@ class Decoder(tf.keras.Model):
         self.filter_size2 = 2
         self.filter_size3 = 1
         
-        self.kernel_size1 = 10
-        self.kernel_size2 = 10
-        self.kernel_size3 = 10
+        self.kernel_size1 = 20
+        self.kernel_size2 = 20
+        self.kernel_size3 = 20
         
         self.stride1 = 2
         self.stride2 = 2
@@ -108,6 +108,7 @@ class Decoder(tf.keras.Model):
         #output = tf.keras.layers.BatchNormalization()(tf.nn.leaky_relu(tf.add(output, self.deconv2_b)))
         #print("Decoder after deconv1: ",output.get_shape())
         output = tf.keras.layers.BatchNormalization()(self.decoder_upsample1(output))
+        output = tf.nn.leaky_relu(output)
         #print("Decoder after upsample1: ",output.get_shape())
         output = tf.nn.conv1d_transpose(output, self.deconv3_W, output_shape = [batchSz, int(self.stride3*output.get_shape()[1]), self.filter_size3], strides = self.stride3, padding = 'SAME')
         output = tf.keras.layers.BatchNormalization()(tf.nn.leaky_relu(tf.add(output, self.deconv3_b)))

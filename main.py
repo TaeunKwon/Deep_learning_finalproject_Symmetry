@@ -62,7 +62,7 @@ def test(model, test_data):
     
     return curr_loss/step
 
-def train_cluster(model, model_auto, train_data, num_iter, p):
+def train_cluster(model, model_auto, train_data, num_iter, p, ch_ind, delta_t):
     
     BSZ = model.batch_size
     num_batch = int(len(train_data)/BSZ)
@@ -71,6 +71,8 @@ def train_cluster(model, model_auto, train_data, num_iter, p):
     indices = tf.random.shuffle(indices)
     train_data = tf.reshape(train_data, (-1, 1300,1))
     shuffled_data = tf.gather(train_data, indices)
+    shuffled_ch_ind = tf.gather(ch_ind, indices)
+    shuffled_delta_t = tf.gather(delta_t, indices)
     
     curr_loss = 0
     step = 0      
@@ -84,7 +86,7 @@ def train_cluster(model, model_auto, train_data, num_iter, p):
             else:
                 p = tf.concat([p, model.target_distribution(q)], axis = 0)
                     
-            loss_cluster = model.loss_function(q, p[start:end])
+            loss_cluster = model.loss_function(q, p[start:end],shuffled_delta_t[start:end], shuffled_ch_ind[start:end], alpha = 1.5)
             loss_auto = model_auto.loss_function(encoded, shuffled_data[start:end])
         
         gradients_cluster = tape.gradient(loss_cluster, model.trainable_variables)        
@@ -114,8 +116,8 @@ def lifetime_calc(model, encoder, train_data, evt_ind):
     
     visualization.feature_v_proj(encoder, train_data, ind)
     
-    cluster1 = np.array(list(set(evt_ind[-len(ind):][ind == 1])))
-    cluster2 = np.array(list(set(evt_ind[-len(ind):][ind == 0])))
+    cluster1 = np.array(list(set(evt_ind[ind == 1])))
+    cluster2 = np.array(list(set(evt_ind[ind == 0])))
     
     lifetime("../testData11_14bit_100mV.npy", cluster1)
     lifetime("../testData11_14bit_100mV.npy", cluster2)
@@ -127,7 +129,10 @@ def main():
         print("<Model Type>: [autoencoder/cluster]")
         return
     
-    pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy")
+    pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 21000, 1000)
+    delta_t_origin = preprocess.get_delta_t("../testData11_14bit_100mV_reduced.npz")
+    train_delta_t = delta_t_origin[train_evt_ind, train_ch_ind]
+    test_delta_t = delta_t_origin[test_evt_ind, test_ch_ind]
   
     model = AutoEncoder()
     checkpoint_dir = './checkpoint'
@@ -173,14 +178,14 @@ def main():
         cluster_pred = kmeans.fit_predict(model.encoder(tf.reshape(pulse_data[:10000], (-1, 1300,1))))
         model_cluster.cluster.set_weights([kmeans.cluster_centers_])
         
-        num_iter = 20
+        num_iter = 10#20
         cnt_iter = 0
         
         p = None
         
         for i in range(num_iter):
             print(cnt_iter+1, 'th iteration:')
-            tot_loss, p = train_cluster(model_cluster, model, pulse_data, cnt_iter, p)
+            tot_loss, p = train_cluster(model_cluster, model, pulse_data, cnt_iter, p, train_ch_ind, train_delta_t)
             cnt_iter += 1
             prbs = model_cluster.call(tf.cast(tf.reshape(pulse_data[:10000], (-1, 1300,1)), dtype = tf.float32))
             ind = tf.argmax(prbs, axis = 1)
@@ -196,7 +201,7 @@ def main():
     elif sys.argv[1] == "lifetime":
         checkpoint.restore(manager.latest_checkpoint)
         checkpoint_cluster.restore(manager_cluster.latest_checkpoint)
-        lifetime_calc(model_cluster, model.encoder, pulse_data, evt_ind)
+        lifetime_calc(model_cluster, model.encoder, pulse_data, train_evt_ind)
     
 if __name__ == '__main__':
 	main()
