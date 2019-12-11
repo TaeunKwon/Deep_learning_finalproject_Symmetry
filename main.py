@@ -81,7 +81,7 @@ def train_cluster(model, model_auto, train_data, num_iter, p):
         with tf.GradientTape(persistent = True) as tape:
             q = model.call(shuffled_data[start:end])
             
-            if (num_iter % 5) == 0:
+            if (num_iter % 10) == 0:
                 if start == 0 :
                     p = model.target_distribution(q)
                 else:
@@ -108,7 +108,7 @@ def train_cluster(model, model_auto, train_data, num_iter, p):
     with tf.GradientTape(persistent = True) as tape:
         q = model.call(shuffled_data[end:])
             
-        if (num_iter % 5) == 0:
+        if (num_iter % 10) == 0:
             p = tf.concat([p, model.target_distribution(q)], axis = 0)
         loss_cluster = model.loss_function(q, p[end:])
             

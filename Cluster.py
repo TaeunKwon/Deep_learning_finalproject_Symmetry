@@ -30,28 +30,28 @@ class cluster(tf.keras.layers.Layer):
         return q
     
     def siml(self, inputs):
-        #complexity_input = tf.math.sqrt(tf.reduce_sum(tf.square(inputs[:, 1:] - inputs[:, :-1]), axis = 1))
-        #complexity_cent = tf.math.sqrt(tf.reduce_sum(tf.square(self.clusters[:, 1:] - self.clusters[:, :-1]), axis = 1))   
-        #complexity_factor = tf.zeros((len(inputs), self.n_clusters))
-        #C_input, C_cent = tf.meshgrid(complexity_cent, complexity_input)
-        #complexity_factor = tf.keras.backend.maximum(C_input, C_cent)/tf.keras.backend.minimum(C_input, C_cent)
+        complexity_input = tf.math.sqrt(tf.reduce_sum(tf.square(inputs[:, 1:] - inputs[:, :-1]), axis = 1))
+        complexity_cent = tf.math.sqrt(tf.reduce_sum(tf.square(self.clusters[:, 1:] - self.clusters[:, :-1]), axis = 1))   
+        complexity_factor = tf.zeros((len(inputs), self.n_clusters))
+        C_input, C_cent = tf.meshgrid(complexity_cent, complexity_input)
+        complexity_factor = tf.keras.backend.maximum(C_input, C_cent)/tf.keras.backend.minimum(C_input, C_cent)
         
         euclidean = tf.math.sqrt(tf.math.reduce_sum(tf.math.square(tf.expand_dims(inputs, axis=1) - self.clusters), axis=2))
         
-        return euclidean#*complexity_factor
+        return euclidean*complexity_factor
         
     
 class clustering(tf.keras.Model):
     def __init__(self, encoder):
         super(clustering, self).__init__()
         self.batch_size = 1000
-        self.learning_rate = 1e-6#0.00001
-        self.n_clusters = 2
+        self.learning_rate = 1e-3#0.00001
+        self.n_clusters = 3
         
         self.encoder = encoder
         
         self.cluster = cluster(n_clusters = self.n_clusters)
-        self.cluster.build([None, 100])
+        self.cluster.build([None, 10])
         
         self.optimizer =  tf.keras.optimizers.Adam(self.learning_rate)
         
@@ -70,4 +70,4 @@ class clustering(tf.keras.Model):
       #P = tf.distributions.Categorical(probs = q)
       #return tf.distributions.kl_divergence(Q,P)
       
-      return tf.reduce_sum(p*tf.math.log(p/q))
+      return tf.keras.losses.KLDivergence()(p, q)*tf.square((tf.cast(tf.reduce_sum(tf.cast(tf.equal(tf.argmax(q, axis = 1), tf.cast(tf.zeros(len(q)), dtype = tf.int64)), dtype = tf.int32)), dtype = tf.float32) - len(q)/2.))
