@@ -62,15 +62,18 @@ def test(model, test_data):
     
     return curr_loss/step
 
-def train_cluster(model, model_auto, train_data, num_iter):
+def train_cluster(model, model_auto, train_data, num_iter, p):
     
     BSZ = model.batch_size
-    num_batch = int(len(train_data)/BSZ)
     
-    indices = np.arange(len(train_data))
-    indices = tf.random.shuffle(indices)
-    train_data = tf.reshape(train_data, (-1, 1300,1))
-    shuffled_data = tf.gather(train_data, indices)
+    if num_iter == 0:
+        shuffled_data = train_data
+    else:
+        indices = np.arange(len(train_data))
+        indices = tf.random.shuffle(indices)
+        origin_indices = tf.argsort(indices)
+        shuffled_data = tf.gather(train_data, indices)
+        p = tf.gather(p, indices)
     
     curr_loss = 0
     step = 0      
@@ -78,49 +81,75 @@ def train_cluster(model, model_auto, train_data, num_iter):
         with tf.GradientTape(persistent = True) as tape:
             q = model.call(shuffled_data[start:end])
             
-            if start == 0 :
-                p = model.target_distribution(q)
+            if (num_iter % 5) == 0:
+                if start == 0 :
+                    p = model.target_distribution(q)
+                else:
+                    p = tf.concat([p, model.target_distribution(q)], axis = 0)
+            loss_cluster = model.loss_function(q, p[start:end])
             
-            encoded = model_auto.call(shuffled_data[start:end])
-            #if (num_iter % 3 == 0):
-                    
-            loss_cluster = model.loss_function(q, p)
-            loss_auto = model_auto.loss_function(encoded, shuffled_data[start:end])
+            if (num_iter % 5) == 0:
+                encoded = model_auto.call(shuffled_data[start:end])
+                loss_auto = model_auto.loss_function(encoded, shuffled_data[start:end])
             
-            p = model.target_distribution(q)
-        
         gradients_cluster = tape.gradient(loss_cluster, model.trainable_variables)        
-        gradients_auto = tape.gradient(loss_auto, model_auto.trainable_variables) 
         model.optimizer.apply_gradients(zip(gradients_cluster, model.trainable_variables))  
-        model_auto.optimizer.apply_gradients(zip(gradients_auto, model_auto.trainable_variables)) 
-        
+        if (num_iter % 5) == 0:
+            gradients_auto = tape.gradient(loss_auto, model_auto.trainable_variables) 
+            model_auto.optimizer2.apply_gradients(zip(gradients_auto, model_auto.trainable_variables)) 
+            if step % 10 == 0:
+                print('%dth batches, \tloss_auto: %.3f' % (step, loss_auto))
         curr_loss += loss_cluster
         step += 1 
         
         if step % 10 == 0:
-            print('%dth batches, \tloss_cluster: %.7f, \tloss_auto: %.3f' % (step, loss_cluster, loss_auto))
-
-    return curr_loss/step
+            print('%dth batches, \tloss_cluster: %.7f' % (step, loss_cluster))
+            
+    with tf.GradientTape(persistent = True) as tape:
+        q = model.call(shuffled_data[end:])
+            
+        if (num_iter % 5) == 0:
+            p = tf.concat([p, model.target_distribution(q)], axis = 0)
+        loss_cluster = model.loss_function(q, p[end:])
+            
+        if (num_iter % 5) == 0:
+            encoded = model_auto.call(shuffled_data[end:])  
+            loss_auto = model_auto.loss_function(encoded, shuffled_data[end:])
+            
+    gradients_cluster = tape.gradient(loss_cluster, model.trainable_variables)        
+    model.optimizer.apply_gradients(zip(gradients_cluster, model.trainable_variables))  
+    if (num_iter % 5) == 0:
+        gradients_auto = tape.gradient(loss_auto, model_auto.trainable_variables) 
+        model_auto.optimizer2.apply_gradients(zip(gradients_auto, model_auto.trainable_variables)) 
+        
+        curr_loss += loss_cluster
+        step += 1 
+        
+    if num_iter != 0:
+        p = tf.gather(p, origin_indices)
+    return curr_loss/step, p
 
 def lifetime_calc(model, encoder, train_data, evt_ind):
     BSZ = model.batch_size
     
     for start, end in zip(range(0, len(train_data) - BSZ, BSZ), range(BSZ, len(train_data), BSZ)):
         if start == 0:
-            q = model.call(encoder(train_data[start:end]))
+            q = model.call(train_data[start:end])
         else:
-            q = tf.concat([q, model.call(encoder(train_data[start:end]))], axis = 0)
-    q = tf.concat([q, model.call(encoder(train_data[end:]))], axis = 0)
+            q = tf.concat([q, model.call(train_data[start:end])], axis = 0)
+    q = tf.concat([q, model.call(train_data[end:])], axis = 0)
     
     ind = tf.argmax(q, axis = 1)
     
     visualization.feature_v_proj(encoder, train_data, ind)
     
-    cluster1 = np.array(list(set(evt_ind[-len(ind):][ind == 1])))
-    cluster2 = np.array(list(set(evt_ind[-len(ind):][ind == 0])))
+    cluster1 = np.array(list(set(evt_ind[-len(ind):][ind == 2])))
+    cluster2 = np.array(list(set(evt_ind[-len(ind):][ind == 1])))
+    cluster3 = np.array(list(set(evt_ind[-len(ind):][ind == 0])))
     
     lifetime("../testData11_14bit_100mV.npy", cluster1)
     lifetime("../testData11_14bit_100mV.npy", cluster2)
+    lifetime("../testData11_14bit_100mV.npy", cluster3)
     
 
 def main():
@@ -140,7 +169,7 @@ def main():
     if sys.argv[1] == "autoencoder":
         start = time.time()    
         
-        num_epochs = 1
+        num_epochs = 10
         curr_loss = 0
         epoch = 0
         for i in range(num_epochs):
@@ -171,17 +200,23 @@ def main():
     manager_cluster = tf.train.CheckpointManager(checkpoint_cluster, checkpoint_dir_cluster, max_to_keep=3)
 
     if sys.argv[1] == "cluster":   
-        kmeans = KMeans(n_clusters = 2, n_init = 20)
-        cluster_pred = kmeans.fit_predict(model.encoder(tf.reshape(pulse_data[:10000], (-1, 1300,1))))
+        #checkpoint_cluster.restore(manager_cluster.latest_checkpoint)
+        
+        kmeans = KMeans(n_clusters = 3, init = 'k-means++', n_init = 10, max_iter = 400)
+        cluster_pred = kmeans.fit_predict(model.encoder(tf.reshape(pulse_data[:min(len(pulse_data), 10000)], (-1, 1300,1))))
         model_cluster.cluster.set_weights([kmeans.cluster_centers_])
+        print(model_cluster.cluster.clusters)
+        print(kmeans.cluster_centers_)
+        #print(kmeans.inertia_)
         
         num_iter = 20
         cnt_iter = 0
         
+        p = None
         
         for i in range(num_iter):
             print(cnt_iter+1, 'th iteration:')
-            tot_loss = train_cluster(model_cluster, model, pulse_data, cnt_iter)
+            tot_loss, p = train_cluster(model_cluster, model, pulse_data, cnt_iter, p)
             cnt_iter += 1
             prbs = model_cluster.call(tf.cast(tf.reshape(pulse_data[:10000], (-1, 1300,1)), dtype = tf.float32))
             ind = tf.argmax(prbs, axis = 1)
@@ -190,11 +225,10 @@ def main():
             if cnt_iter % 10 == 0 and cnt_iter != 0 :
                 print("Saving Checkpoint...")
                 manager_cluster.save()
-                manager.save()
         
         
         visualization.feature_v_proj(model.encoder, test_data, test_label)
-        
+        manager.save()
     
     elif sys.argv[1] == "lifetime":
         checkpoint.restore(manager.latest_checkpoint)
