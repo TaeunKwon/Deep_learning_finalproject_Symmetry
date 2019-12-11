@@ -46,12 +46,12 @@ class clustering(tf.keras.Model):
         super(clustering, self).__init__()
         self.batch_size = 1000
         self.learning_rate = 1e-6#0.00001
-        self.n_clusters = 2
+        self.n_clusters = 3
         
         self.encoder = encoder
         
         self.cluster = cluster(n_clusters = self.n_clusters)
-        self.cluster.build([None, 100])
+        self.cluster.build([None, 10])
         
         self.optimizer =  tf.keras.optimizers.Adam(self.learning_rate)
         
@@ -65,9 +65,22 @@ class clustering(tf.keras.Model):
         return tf.transpose((tf.transpose(weight) / tf.math.reduce_sum(weight, axis = 1)))
     
     #@tf.function
-    def loss_function(self, q, p):
+    def loss_function(self, q, p, delta_t, ch_ind, alpha = 1.0):
       #Q = tf.distributions.Categorical(probs = q)
       #P = tf.distributions.Categorical(probs = q)
       #return tf.distributions.kl_divergence(Q,P)
       
-      return tf.reduce_sum(p*tf.math.log(p/q))
+      return tf.reduce_sum(p*tf.math.log(p/q)) + alpha * self.likelihood_loss(q, delta_t, ch_ind)
+  
+    def likelihood_loss(self, prbs, delta_t, ch_ind):
+        ind = tf.argmax(prbs, axis = 1)
+        # cluster 1 and ch 0 and delta_t >0
+        cut = tf.logical_and(tf.equal(ind, 1), tf.equal(ch_ind, 0)) 
+        cut = tf.logical_and(cut, tf.greater(delta_t, 0.0))
+        cut = tf.cast(cut, dtype = tf.float32)
+        likelihood = tf.math.log(1/self.true_p(delta_t))
+        return tf.reduce_mean(likelihood*cut)
+    
+    def true_p(self, x):
+        true_lifetime = 2.19 #ture value in plastic scintillator???
+        return 1/true_lifetime * tf.exp(-x/true_lifetime) # +bkg???

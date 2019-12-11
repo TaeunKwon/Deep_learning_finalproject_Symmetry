@@ -7,10 +7,10 @@ def exp_func(x, a, tau, bkg):
   return a * np.exp(-x/tau) + bkg
 
 def find_peak2(b, peakwhere2): # b is (2700, ) array
-    b = tf.cast(tf.reshape(b, (-1, 2700,1)), dtype = tf.float32)
+    b = tf.cast(tf.reshape(b, (-1, 2700,1,1)), dtype = tf.float32)
 
-    maxpooled = tf.nn.max_pool1d(b[:, 220:, :], 10, 1, padding = 'SAME')
-    minpooled = -tf.nn.max_pool1d(-b[:, 220:, :], 10, 1, padding = 'SAME')
+    maxpooled = tf.nn.max_pool(b[:, 220:, :], 10, 1, padding = 'SAME')
+    minpooled = -tf.nn.max_pool(-b[:, 220:, :], 10, 1, padding = 'SAME')
     
     diff = tf.reshape(maxpooled - minpooled, [-1, 2480])
     maxes = tf.reduce_max(diff, axis = 1)
@@ -75,6 +75,7 @@ def lifetime(filename, muon_evt_ind):
 
     plt.figure(1)
     hist, bin_edge, patch = plt.hist(delta_t, bins = 20, range = (0.01, 20.), label = 'data', histtype = 'step')
+    print(hist, bin_edge)
     
     bin_center = (bin_edge[1:]+bin_edge[:-1])/2
     
