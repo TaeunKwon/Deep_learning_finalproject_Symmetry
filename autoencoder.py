@@ -13,8 +13,8 @@ class Encoder(tf.keras.Model):
         self.filter_size2 = 4
         #self.filter_size3 = 8
         
-        self.kernel_size1 = 10
-        self.kernel_size2 = 10
+        self.kernel_size1 = 5
+        self.kernel_size2 = 5
         #self.kernel_size3 = 10
         
         self.stride1 = 1
@@ -68,9 +68,9 @@ class Decoder(tf.keras.Model):
         self.filter_size2 = 2
         self.filter_size3 = 1
         
-        self.kernel_size1 = 10
-        self.kernel_size2 = 10
-        self.kernel_size3 = 10
+        self.kernel_size1 = 20
+        self.kernel_size2 = 20
+        self.kernel_size3 = 20
         
         self.stride1 = 2
         self.stride2 = 2
@@ -120,7 +120,7 @@ class AutoEncoder(tf.keras.Model):
         super(AutoEncoder, self).__init__()
         self.batch_size = 100
         self.learning_rate = 1e-3#0.0000001
-        self.learning_rate2 = 1e-5
+        self.learning_rate2 = 1e-3
         
         self.encoder = Encoder()
         self.decoder = Decoder()

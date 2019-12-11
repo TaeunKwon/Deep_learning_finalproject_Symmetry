@@ -23,6 +23,8 @@ def plot_1evt(en_input, de_output):
     
     ax[3].set_xlabel('time [8 ns]')
     
+    plt.show()
+    
 def plot_1ch(en_input, de_output):
     '''
     Plot encoder input and decoder output
@@ -59,4 +61,18 @@ def feature_v_proj(encoder, data, label):
     plt.colorbar()
     #plt.legend()
     plt.show()
-        
+    
+def feature_v_proj_v2(encoded, label1, label2):
+    z = encoded
+    
+    tsne = TSNE(n_components=2)
+    #tsne = TSNE(n_components=1)
+    transformed = tsne.fit_transform(z)
+    plt.scatter(transformed[:, 0], transformed[:, 1], c=label1, s = 4)
+    plt.colorbar()
+    plt.show()
+    
+    plt.scatter(transformed[:, 0], transformed[:, 1], c=label2, s = 4)
+    plt.colorbar()
+    plt.show()
+            

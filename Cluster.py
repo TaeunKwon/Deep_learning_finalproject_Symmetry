@@ -36,7 +36,7 @@ class cluster(tf.keras.layers.Layer):
         C_input, C_cent = tf.meshgrid(complexity_cent, complexity_input)
         complexity_factor = tf.keras.backend.maximum(C_input, C_cent)/tf.keras.backend.minimum(C_input, C_cent)
         
-        euclidean = tf.math.sqrt(tf.math.reduce_sum(tf.math.square(tf.expand_dims(inputs, axis=1) - self.clusters), axis=2))
+        euclidean = tf.math.reduce_sum(tf.math.square(tf.expand_dims(inputs, axis=1) - self.clusters), axis=2)
         
         return euclidean*complexity_factor
         
@@ -44,7 +44,7 @@ class cluster(tf.keras.layers.Layer):
 class clustering(tf.keras.Model):
     def __init__(self, encoder):
         super(clustering, self).__init__()
-        self.batch_size = 1000
+        self.batch_size = 2000
         self.learning_rate = 1e-3#0.00001
         self.n_clusters = 3
         
@@ -65,9 +65,32 @@ class clustering(tf.keras.Model):
         return tf.transpose((tf.transpose(weight) / tf.math.reduce_sum(weight, axis = 1)))
     
     #@tf.function
-    def loss_function(self, q, p):
+    def loss_function(self, q, p, delta_t, ch_ind, alpha = 1.0):
       #Q = tf.distributions.Categorical(probs = q)
       #P = tf.distributions.Categorical(probs = q)
       #return tf.distributions.kl_divergence(Q,P)
       
-      return tf.keras.losses.KLDivergence()(p, q)*tf.square((tf.cast(tf.reduce_sum(tf.cast(tf.equal(tf.argmax(q, axis = 1), tf.cast(tf.zeros(len(q)), dtype = tf.int64)), dtype = tf.int32)), dtype = tf.float32) - len(q)/2.))
+      #return tf.keras.losses.KLDivergence()(p, q)*tf.square((tf.cast(tf.reduce_sum(tf.cast(tf.equal(tf.argmax(q, axis = 1), tf.cast(tf.zeros(len(q)), dtype = tf.int64)), dtype = tf.int32)), dtype = tf.float32) - len(q)/2.))
+      return (10*tf.keras.losses.KLDivergence()(p, q) + alpha * self.likelihood_loss(q, delta_t, ch_ind)) + 0.001*tf.square((tf.cast(tf.reduce_sum(tf.cast(tf.equal(tf.argmax(q, axis = 1), 0), dtype = tf.int32)), dtype = tf.float32) - 7*len(q)/8.))
+  
+    def likelihood_loss(self, prbs, delta_t, ch_ind):
+        delta_t = tf.cast(delta_t, dtype = tf.float32)
+        
+        ind = tf.argmax(prbs, axis = 1)
+        # cluster 1 and ch 0 and delta_t >0
+        cut = tf.not_equal(ind, 0)
+        cut = tf.logical_and(cut, tf.greater(delta_t, 0.0))
+        cut = tf.cast(cut, dtype = tf.float32)
+        likelihood = tf.cast(tf.math.log(1/self.true_p(delta_t)), dtype = tf.float32)
+        
+        cut2 = tf.equal(ind, 0)
+        cut2 = tf.cast(tf.logical_and(cut2, tf.greater(delta_t, 0.0)), dtype = tf.float32)
+        cnt = tf.reduce_sum(tf.cast(cut2, dtype = tf.int32))
+        maximum = tf.cast(tf.reduce_max(delta_t*cut2), dtype = tf.float32)
+        
+        likelihood2 = tf.cast(cnt, dtype = tf.float32)*tf.math.log(maximum) if maximum > 0  else 0
+        return tf.reduce_sum(likelihood*cut) + likelihood2
+    
+    def true_p(self, x):
+        true_lifetime = 2.19 #ture value in plastic scintillator???
+        return 1/true_lifetime * tf.exp(-x/true_lifetime) # +bkg???

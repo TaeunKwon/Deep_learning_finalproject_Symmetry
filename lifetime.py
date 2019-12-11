@@ -2,15 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import tensorflow as tf
+import preprocess as preprocess
 
 def exp_func(x, a, tau, bkg):
   return a * np.exp(-x/tau) + bkg
 
 def find_peak2(b, peakwhere2): # b is (2700, ) array
-    b = tf.cast(tf.reshape(b, (-1, 2700,1)), dtype = tf.float32)
+    b = tf.cast(tf.reshape(b, (-1, 2700,1,1)), dtype = tf.float32)
 
-    maxpooled = tf.nn.max_pool1d(b[:, 220:, :], 10, 1, padding = 'SAME')
-    minpooled = -tf.nn.max_pool1d(-b[:, 220:, :], 10, 1, padding = 'SAME')
+    maxpooled = tf.nn.max_pool(b[:, 220:, :], 10, 1, padding = 'SAME')
+    minpooled = -tf.nn.max_pool(-b[:, 220:, :], 10, 1, padding = 'SAME')
     
     diff = tf.reshape(maxpooled - minpooled, [-1, 2480])
     maxes = tf.reduce_max(diff, axis = 1)
@@ -18,7 +19,7 @@ def find_peak2(b, peakwhere2): # b is (2700, ) array
     
     
     for i in range(len(max_arg)):
-        peakwhere2[i] = max_arg[i] + 220 if (maxes[i] > 500.) else 0
+        peakwhere2[i] = max_arg[i] + 220 + 5 if (maxes[i] > 500.) else 0
     
     return peakwhere2
     
@@ -29,8 +30,8 @@ def find_peak2(b, peakwhere2): # b is (2700, ) array
     #        return maxInd
     #return 0
 
-
-def lifetime(filename, muon_evt_ind):
+def get_delta_t(filename, muon_evt_ind):
+    
     dt = 0.008 # us
     data = np.load(filename, mmap_mode = 'r')
     muon_data_0 = data[muon_evt_ind][:,0,:]#+data[muon_evt_ind][:,1,:]
@@ -72,9 +73,17 @@ def lifetime(filename, muon_evt_ind):
             peakWhere1[i] = peakWhere1_3[i]
 
     delta_t = (peakWhere2 - peakWhere1) * dt
+    
+    return delta_t
+
+
+def lifetime(filename, muon_evt_ind):
+    
+    delta_t = get_delta_t(filename, muon_evt_ind)
 
     plt.figure(1)
     hist, bin_edge, patch = plt.hist(delta_t, bins = 20, range = (0.01, 20.), label = 'data', histtype = 'step')
+    print(hist, bin_edge)
     
     bin_center = (bin_edge[1:]+bin_edge[:-1])/2
     

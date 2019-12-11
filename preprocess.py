@@ -1,4 +1,5 @@
 import numpy as np
+import lifetime as lifetime
 #import matplotlib.pyplot as plt
 #from scipy.signal import find_peaks
 
@@ -23,13 +24,35 @@ def find_peak1(a):
     cut_thres = (maxValue > threshold)
     maxInd = maxInd * cut_thres
     return maxInd, maxValue
+
+def get_delta_t(filename = '../testData11_14bit_100mV_reduced.npz'):
+    data = np.load(filename)
+    peak1 = data["peakWhere1"]
+    peak2 = data["peakWhere2"]
+    delta_t = np.maximum(peak2 - peak1, 0.0, dtype = np.float32)
+    return delta_t
+
+def get_delta_t2(filename = '../testData11_14bit_100mV_reduced.npz'):
+    data = np.load(filename)
+    train_delta_t = data["train_delta_t"]
+    test_delta_t = data["test_delta_t"]
+    return train_delta_t, test_delta_t
     
-def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len_test = 0):
+def save_delta_t(filename, train_evt_ind, test_evt_ind):
+    train_delta_t = lifetime.get_delta_t("../testData11_14bit_100mV.npy", train_evt_ind)#delta_t_origin[train_evt_ind, train_ch_ind]
+    test_delta_t = lifetime.get_delta_t("../testData11_14bit_100mV.npy", test_evt_ind)#delta_t_origin[test_evt_ind, test_ch_ind]
+    
+    np.savez(filename, train_delta_t = train_delta_t, test_delta_t = test_delta_t)
+    
+    return
+
+def get_data(filename ='../testData11_14bit_100mV.npy', len_data_to_load = 0, len_test = 0):
     '''
     :param filename: name of file to load
     :return: train data array (size: numEvt x numSam ), train label array 
              (length: numEvt), test data array, test label array,
-             corresponding event index and channel index.
+             corresponding train event index, test index,
+             train channel index and test channel index.
              
              Label is 1 if ch 0 and 1 have peak.
              Label is 2 if ch 0, 1, and 2 have peak.
@@ -86,6 +109,7 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     
     # Normalization
     data = data / peakMax1[:,None,None]
+    data = data.astype(np.float32)
                 
     if not len_data_to_load:
         len_data_to_load = len(label)
@@ -94,4 +118,6 @@ def get_data(filename ='./testData11_14bit_100mV.npy', len_data_to_load = 0, len
     else:
         num_test = int(np.ceil(len_data_to_load*0.01))
     
-    return data[num_test:],label[num_test:],data[:num_test],label[:num_test], evt_ind, ch_ind
+    #save_delta_t('../testData11_14bit_100mV_reduced.npz', evt_ind[num_test:], evt_ind[:num_test])
+    
+    return data[num_test:],label[num_test:],data[:num_test],label[:num_test], evt_ind[num_test:], evt_ind[:num_test], ch_ind[num_test:], ch_ind[:num_test]
