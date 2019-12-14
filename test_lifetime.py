@@ -54,22 +54,26 @@ def restore_cluster():
             
 def muon_lifetime():
     
-    pulse_data, label, test_data, test_label, evt_ind, ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 10010, 10000)
+    pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy",5010,5000)
+    #pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../muon_data_14bit_2.npy", 10010, 10000)
     
-    transformed = np.load("./results/cluster_transformed.npy")[:10000]
-    
+    transformed = np.load("./results/transformed_2Vthres_191211.npy")
+    cluster_label = np.load("./results/cluster_label_OPTICS_2Vthres_191211.npy")
+
+    plt.figure()
     plt.scatter(transformed[:, 0], transformed[:, 1], c=test_label, s = 4)
     plt.colorbar()
     plt.show()
     
-    selected1 = transformed[:, 1] > 2.0* transformed[:, 0] + 90.0
-    selected2 = transformed[:, 1] < 2.0* transformed[:, 0] - 90.0
-    selected = np.logical_or(selected1, selected2)
-    plt.scatter(transformed[:, 0], transformed[:, 1], c=selected, s = 4)
-    plt.colorbar()
-    plt.show()
+    #selected1 = transformed[:, 1] > 2.0* transformed[:, 0] + 90.0
+    #selected2 = transformed[:, 1] < 2.0* transformed[:, 0] - 90.0
+    #selected = np.logical_or(selected1, selected2)
+    #plt.scatter(transformed[:, 0], transformed[:, 1], c=selected, s = 4)
+    #plt.colorbar()
+    #plt.show()
     
-    evt_ind_selected = np.array(list(set(evt_ind[:len(test_data)][selected])))
+    selected = np.logical_or(cluster_label==2, cluster_label==3)
+    evt_ind_selected = np.array(list(set(test_evt_ind[selected])))
     #evt_ind_selected = np.arange(len(test_data))
     
     

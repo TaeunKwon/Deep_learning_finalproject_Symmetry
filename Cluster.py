@@ -68,18 +68,17 @@ class clustering(tf.keras.Model):
     def loss_function(self, q, p, delta_t, ch_ind, alpha = 1.0):
       #Q = tf.distributions.Categorical(probs = q)
       #P = tf.distributions.Categorical(probs = q)
-      #return tf.distributions.kl_divergence(Q,P)
-      
-      return tf.reduce_sum(p*tf.math.log(p/q)) + alpha * self.likelihood_loss(q, delta_t, ch_ind)
+      #return tf.distributions.kl_divergence(Q,P)      
+      return tf.reduce_sum(p*tf.math.log(p/q)) #+ alpha * self.likelihood_loss(q, delta_t, ch_ind)
   
     def likelihood_loss(self, prbs, delta_t, ch_ind):
         ind = tf.argmax(prbs, axis = 1)
         # cluster 1 and ch 0 and delta_t >0
-        cut = tf.logical_and(tf.equal(ind, 1), tf.equal(ch_ind, 0)) 
+        cut = tf.logical_and(tf.not_equal(ind, 0), tf.equal(ch_ind, 0)) 
         cut = tf.logical_and(cut, tf.greater(delta_t, 0.0))
         cut = tf.cast(cut, dtype = tf.float32)
         likelihood = tf.math.log(1/self.true_p(delta_t))
-        return tf.reduce_mean(likelihood*cut)
+        return tf.reduce_sum(delta_t*cut)#tf.reduce_sum(likelihood*cut)
     
     def true_p(self, x):
         true_lifetime = 2.19 #ture value in plastic scintillator???

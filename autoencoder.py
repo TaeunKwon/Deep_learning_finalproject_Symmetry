@@ -13,8 +13,8 @@ class Encoder(tf.keras.Model):
         self.filter_size2 = 4
         #self.filter_size3 = 8
         
-        self.kernel_size1 = 5
-        self.kernel_size2 = 5
+        self.kernel_size1 = 10
+        self.kernel_size2 = 10
         #self.kernel_size3 = 10
         
         self.stride1 = 1
@@ -45,6 +45,7 @@ class Encoder(tf.keras.Model):
         output = tf.keras.layers.BatchNormalization()(self.encoder_conv1(pulses))
         #print("Encoder after conv1: ",output.get_shape())
         output = tf.keras.layers.BatchNormalization()(self.encoder_maxpool1(output))
+        output = tf.nn.leaky_relu(output)
         #print("Encoder after maxpool1: ",output.get_shape())
         #output = tf.keras.layers.BatchNormalization()(self.encoder_conv2(output))
         #output = tf.keras.layers.BatchNormalization()(self.encoder_conv3(output))
@@ -68,9 +69,9 @@ class Decoder(tf.keras.Model):
         self.filter_size2 = 2
         self.filter_size3 = 1
         
-        self.kernel_size1 = 20
-        self.kernel_size2 = 20
-        self.kernel_size3 = 20
+        self.kernel_size1 = 10
+        self.kernel_size2 = 10
+        self.kernel_size3 = 10
         
         self.stride1 = 2
         self.stride2 = 2

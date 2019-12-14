@@ -65,13 +65,14 @@ def test(model, test_data):
 def train_cluster(model, model_auto, train_data, num_iter, p, ch_ind, delta_t):
     
     BSZ = model.batch_size
+    len_data = len(train_data)
     
     if num_iter == 0:
         shuffled_data = train_data
         shuffled_ch_ind = ch_ind
         shuffled_delta_t = delta_t
     else:
-        indices = np.arange(len(train_data))
+        indices = np.arange(len_data)
         indices = tf.random.shuffle(indices)
         origin_indices = tf.argsort(indices)
         shuffled_data = tf.gather(train_data, indices)
@@ -81,16 +82,19 @@ def train_cluster(model, model_auto, train_data, num_iter, p, ch_ind, delta_t):
     
     curr_loss = 0
     step = 0      
-    for start, end in zip(range(0, len(shuffled_data) - BSZ, BSZ), range(BSZ, len(shuffled_data), BSZ)):
+    for i_batch in range(int(len_data/BSZ)+1):
+        start = i_batch * BSZ
+        end = min(i_batch*BSZ+BSZ, len_data)
         with tf.GradientTape(persistent = True) as tape:
             q = model.call(shuffled_data[start:end])
             
-            if (num_iter % 5) == 0:
+            #if (num_iter % 10) == 0:
+            if num_iter == 0:
                 if start == 0 :
                     p = model.target_distribution(q)
                 else:
                     p = tf.concat([p, model.target_distribution(q)], axis = 0)
-            loss_cluster = model.loss_function(q, p[start:end],shuffled_delta_t[start:end], shuffled_ch_ind[start:end], alpha = 5.0)
+            loss_cluster = model.loss_function(q, p[start:end],shuffled_delta_t[start:end], shuffled_ch_ind[start:end], alpha =1.0e-2)
 
             if (num_iter % 5) == 0:
                 encoded = model_auto.call(shuffled_data[start:end])
@@ -102,32 +106,12 @@ def train_cluster(model, model_auto, train_data, num_iter, p, ch_ind, delta_t):
             gradients_auto = tape.gradient(loss_auto, model_auto.trainable_variables) 
             model_auto.optimizer2.apply_gradients(zip(gradients_auto, model_auto.trainable_variables)) 
             if step % 10 == 0:
-                print('%dth batches, \tloss_auto: %.3f' % (step, loss_auto))
+                print('%dth batches, \tloss_auto: %.3f' % (step, loss_auto/BSZ))
         curr_loss += loss_cluster
         step += 1 
         
         if step % 10 == 0:
             print('%dth batches, \tloss_cluster: %.7f' % (step, loss_cluster))
-            
-    with tf.GradientTape(persistent = True) as tape:
-        q = model.call(shuffled_data[end:])
-            
-        if (num_iter % 5) == 0:
-            p = tf.concat([p, model.target_distribution(q)], axis = 0)
-        loss_cluster = model.loss_function(q, p[end:], shuffled_delta_t[end:], shuffled_ch_ind[end:], alpha = 5.0)
-            
-        if (num_iter % 5) == 0:
-            encoded = model_auto.call(shuffled_data[end:])  
-            loss_auto = model_auto.loss_function(encoded, shuffled_data[end:])
-            
-    gradients_cluster = tape.gradient(loss_cluster, model.trainable_variables)        
-    model.optimizer.apply_gradients(zip(gradients_cluster, model.trainable_variables))  
-    if (num_iter % 5) == 0:
-        gradients_auto = tape.gradient(loss_auto, model_auto.trainable_variables) 
-        model_auto.optimizer2.apply_gradients(zip(gradients_auto, model_auto.trainable_variables)) 
-        
-        curr_loss += loss_cluster
-        step += 1 
         
     if num_iter != 0:
         p = tf.gather(p, origin_indices)
@@ -163,7 +147,9 @@ def main():
         return
     
     pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy")
+    #pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../muon_artificial.npy")
     delta_t_origin = preprocess.get_delta_t("../testData11_14bit_100mV_reduced.npz")
+    #delta_t_origin = preprocess.get_delta_t("../muon_artificial_reduced.npz")
     train_delta_t = delta_t_origin[train_evt_ind, train_ch_ind]
     test_delta_t = delta_t_origin[test_evt_ind, test_ch_ind]
   
@@ -176,7 +162,7 @@ def main():
     if sys.argv[1] == "autoencoder":
         start = time.time()    
         
-        num_epochs = 10
+        num_epochs = 1
         curr_loss = 0
         epoch = 0
         for i in range(num_epochs):
@@ -197,9 +183,9 @@ def main():
         visualization.plot_1ch(test_data[25], tf.squeeze(model.call(tf.reshape(test_data[25], (1, 1300, 1)))).numpy())
         visualization.feature_v_proj(model.encoder, test_data, test_label)
     
-    elif sys.argv[1] == "cluster":
-        checkpoint.restore(manager.latest_checkpoint)
-        visualization.feature_v_proj(model.encoder, test_data, test_label)
+    #elif sys.argv[1] == "cluster":
+        #checkpoint.restore(manager.latest_checkpoint)
+        #visualization.feature_v_proj(model.encoder, test_data, test_label)
 
     model_cluster = clustering(model.encoder)
     checkpoint_dir_cluster = './checkpoint_cluster'
@@ -212,8 +198,15 @@ def main():
         kmeans = KMeans(n_clusters = 3, init = 'k-means++', n_init = 10, max_iter = 400)
         cluster_pred = kmeans.fit_predict(model.encoder(tf.reshape(pulse_data[:min(len(pulse_data), 10000)], (-1, 1300,1))))
         model_cluster.cluster.set_weights([kmeans.cluster_centers_])
+        #initial_en = model.encoder(tf.reshape(pulse_data[:min(len(pulse_data), 10000)], (-1, 1300,1)))
+        #center0 = tf.reduce_mean(tf.boolean_mask(initial_en, tf.equal(label[:min(len(pulse_data), 10000)], 0)), axis = 0)
+        #center1 = tf.reduce_mean(tf.boolean_mask(initial_en, tf.equal(label[:min(len(pulse_data), 10000)], 1)), axis = 0)
+        #center2 = tf.reduce_mean(tf.boolean_mask(initial_en, tf.equal(label[:min(len(pulse_data), 10000)], 3)), axis = 0)
+        #center = tf.stack([center0, center1, center2])
+        #model_cluster.cluster.set_weights([center])
         print(model_cluster.cluster.clusters)
         print(kmeans.cluster_centers_)
+        #print(center)
         #print(kmeans.inertia_)
         
         num_iter = 10#20
@@ -228,14 +221,18 @@ def main():
             prbs = model_cluster.call(tf.cast(tf.reshape(pulse_data[:10000], (-1, 1300,1)), dtype = tf.float32))
             ind = tf.argmax(prbs, axis = 1)
             visualization.feature_v_proj(model.encoder, pulse_data[:10000], ind)
+            visualization.plot_1ch(test_data[7], tf.squeeze(model.call(tf.reshape(test_data[7], (1, 1300, 1)))).numpy())
             
             if cnt_iter % 10 == 0 and cnt_iter != 0 :
                 print("Saving Checkpoint...")
                 manager_cluster.save()
-        
-        
-        visualization.feature_v_proj(model.encoder, test_data, test_label)
         manager.save()
+                
+        test_encoded = model.encoder(test_data)
+        prbs = model_cluster.call(tf.cast(tf.reshape(test_data, (-1, 1300,1)), dtype = tf.float32))
+        ind = tf.argmax(prbs, axis = 1).numpy()
+        visualization.feature_v_proj_v2(test_encoded, test_label, ind)
+
     
     elif sys.argv[1] == "lifetime":
         checkpoint.restore(manager.latest_checkpoint)
