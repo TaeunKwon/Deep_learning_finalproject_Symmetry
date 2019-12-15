@@ -139,6 +139,35 @@ def lifetime_calc(model, encoder, train_data, evt_ind):
     lifetime("../testData11_14bit_100mV.npy", cluster2)
     lifetime("../testData11_14bit_100mV.npy", cluster3)
     
+def cal_chi2(model, test_data):
+    visualization.plot_1ch(test_data[0], test_data[0])
+    
+    loss = np.zeros(len(test_data))
+    BSZ = model.batch_size
+    step = 0
+    for start, end in zip(range(0, len(test_data) - BSZ, BSZ), range(BSZ, len(test_data), BSZ)):
+        decoded = model.call(test_data[start:end]).numpy()
+        if start ==0:
+            plt.plot(test_data[start,:,0])
+            plt.plot(decoded[start,:,0],'--')
+            plt.show()
+        #loss[start:end] = np.sum((test_data[start:end] - decoded)*(test_data[start:end] - decoded)/test_data[start:end], axis = 1).reshape((100))
+        loss[start:end] = np.sum((test_data[start:end] - decoded)*(test_data[start:end] - decoded), axis = 1).reshape((100))
+        step+=1
+        if step % 10 == 0:
+            print('%dth batches done.' % (step))
+    
+    std = np.reshape(np.std(test_data[:,:80,:], axis = 1),-1)
+    chi = np.sqrt(loss)/std/1300/std
+    plt.figure()
+    plt.hist(chi, bins = 50, range = (0,10), histtype = 'step')
+    (ymin, ymax) = plt.ylim()
+    plt.plot([1.0, 1.0], [ymin, ymax],'--')
+    plt.ylim(ymin, ymax)
+    plt.xlabel("chi-sqaure")
+    plt.ylabel("counts")
+    plt.show()
+    
 
 def main():
     if len(sys.argv) != 2 or sys.argv[1] not in {"autoencoder", "cluster", "lifetime"}:
@@ -146,9 +175,9 @@ def main():
         print("<Model Type>: [autoencoder/cluster]")
         return
     
-    pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy")
+    pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../testData11_14bit_100mV.npy", 11000, 1000)
     #pulse_data, label, test_data, test_label, train_evt_ind, test_evt_ind, train_ch_ind, test_ch_ind = preprocess.get_data("../muon_artificial.npy")
-    delta_t_origin = preprocess.get_delta_t("../testData11_14bit_100mV_reduced.npz")
+    delta_t_origin = preprocess.get_delta_t("../testData11_14bit_100mV_reduced_original.npz")
     #delta_t_origin = preprocess.get_delta_t("../muon_artificial_reduced.npz")
     train_delta_t = delta_t_origin[train_evt_ind, train_ch_ind]
     test_delta_t = delta_t_origin[test_evt_ind, test_ch_ind]
@@ -182,6 +211,8 @@ def main():
         visualization.plot_1ch(test_data[46], tf.squeeze(model.call(tf.reshape(test_data[46], (1, 1300, 1)))).numpy())
         visualization.plot_1ch(test_data[25], tf.squeeze(model.call(tf.reshape(test_data[25], (1, 1300, 1)))).numpy())
         visualization.feature_v_proj(model.encoder, test_data, test_label)
+        
+        #cal_chi2(model, pulse_data[:10000])
     
     #elif sys.argv[1] == "cluster":
         #checkpoint.restore(manager.latest_checkpoint)
