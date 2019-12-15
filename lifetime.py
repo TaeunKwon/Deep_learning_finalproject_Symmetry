@@ -77,9 +77,9 @@ def get_delta_t(filename, muon_evt_ind):
     return delta_t
 
 
-def lifetime(filename, muon_evt_ind):
+def lifetime(delta_t, muon_evt_ind):
     
-    delta_t = get_delta_t(filename, muon_evt_ind)
+    #delta_t = get_delta_t(filename, muon_evt_ind)
 
     plt.figure(1)
     hist, bin_edge, patch = plt.hist(delta_t, bins = 20, range = (0.01, 20.), label = 'data', histtype = 'step')

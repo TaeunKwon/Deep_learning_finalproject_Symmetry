@@ -38,11 +38,11 @@ def get_delta_t2(filename = '../testData11_14bit_100mV_reduced.npz'):
     test_delta_t = data["test_delta_t"]
     return train_delta_t, test_delta_t
     
-def save_delta_t(filename, train_evt_ind, test_evt_ind):
-    train_delta_t = lifetime.get_delta_t("../testData11_14bit_100mV.npy", train_evt_ind)#delta_t_origin[train_evt_ind, train_ch_ind]
-    test_delta_t = lifetime.get_delta_t("../testData11_14bit_100mV.npy", test_evt_ind)#delta_t_origin[test_evt_ind, test_ch_ind]
+def save_delta_t(filename_save, filename_call, train_evt_ind, test_evt_ind):
+    train_delta_t = lifetime.get_delta_t(filename_call, train_evt_ind)#delta_t_origin[train_evt_ind, train_ch_ind]
+    test_delta_t = lifetime.get_delta_t(filename_call, test_evt_ind)#delta_t_origin[test_evt_ind, test_ch_ind]
     
-    np.savez(filename, train_delta_t = train_delta_t, test_delta_t = test_delta_t)
+    np.savez(filename_save, train_delta_t = train_delta_t, test_delta_t = test_delta_t)
     
     return
 
@@ -117,7 +117,8 @@ def get_data(filename ='../testData11_14bit_100mV.npy', len_data_to_load = 0, le
         num_test = len_test
     else:
         num_test = int(np.ceil(len_data_to_load*0.01))
+    filename_save = filename.replace('npy', 'npz')
     
-    #save_delta_t('../testData11_14bit_100mV_reduced.npz', evt_ind[num_test:], evt_ind[:num_test])
+    #save_delta_t(filename_save, filename, evt_ind[num_test:], evt_ind[:num_test])
     
     return data[num_test:],label[num_test:],data[:num_test],label[:num_test], evt_ind[num_test:], evt_ind[:num_test], ch_ind[num_test:], ch_ind[:num_test]

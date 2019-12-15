@@ -13,8 +13,8 @@ class Encoder(tf.keras.Model):
         self.filter_size2 = 4
         #self.filter_size3 = 8
         
-        self.kernel_size1 = 5
-        self.kernel_size2 = 5
+        self.kernel_size1 = 10
+        self.kernel_size2 = 10
         #self.kernel_size3 = 10
         
         self.stride1 = 1
@@ -23,9 +23,9 @@ class Encoder(tf.keras.Model):
         
         self.pool_size1 = 2
         
-        self.Dense_size1 = 400
-        self.Dense_size2 = 100
-        self.Dense_size3 = 10
+        self.Dense_size1 = 800
+        self.Dense_size2 = 400
+        self.Dense_size3 = 100
         
         #Layers
         self.encoder_conv1 = tf.keras.layers.Conv1D(filters = self.filter_size1, kernel_size = self.kernel_size1, strides = self.stride1,
@@ -60,17 +60,17 @@ class Decoder(tf.keras.Model):
         super(Decoder, self).__init__()
         
         #Hyperparameters
-        self.Dense_size1 = 100
-        self.Dense_size2 = 400
+        self.Dense_size1 = 400
+        self.Dense_size2 = 800
         self.Dense_size3 = 1300# =numSamples / pool_size1 * filter_size1
         
         self.filter_size1 = 4
         self.filter_size2 = 2
         self.filter_size3 = 1
         
-        self.kernel_size1 = 20
-        self.kernel_size2 = 20
-        self.kernel_size3 = 20
+        self.kernel_size1 = 10
+        self.kernel_size2 = 10
+        self.kernel_size3 = 10
         
         self.stride1 = 2
         self.stride2 = 2
