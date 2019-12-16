@@ -1,7 +1,4 @@
 import numpy as np
-import lifetime as lifetime
-#import matplotlib.pyplot as plt
-#from scipy.signal import find_peaks
 
 numEvents = 100000
 numChannels = 4
@@ -25,11 +22,50 @@ def find_peak1(a):
     maxInd = maxInd * cut_thres
     return maxInd, maxValue
 
-def get_delta_t(filename = '../testData11_14bit_100mV_reduced.npz'):
-    data = np.load(filename)
-    peak1 = data["peakWhere1"]
-    peak2 = data["peakWhere2"]
-    delta_t = np.maximum(peak2 - peak1, 0.0, dtype = np.float32)
+def get_delta_t(filename, muon_evt_ind):
+    
+    dt = 0.008 # us
+    data = np.load(filename, mmap_mode = 'r')
+    muon_data_0 = data[muon_evt_ind][:,0,:]#+data[muon_evt_ind][:,1,:]
+    muon_data_1 = data[muon_evt_ind][:,1,:]
+    muon_data_2 = data[muon_evt_ind][:,2,:]
+    muon_data_3 = data[muon_evt_ind][:,3,:]
+    # muon_data is shape of (num_muon_data, numSamples)
+
+    peakWhere1_0 = np.argmax(muon_data_0[:,190:220], axis = 1) +190
+    peakWhere1_1 = np.argmax(muon_data_1[:,190:220], axis = 1) +190
+    peakWhere1_2 = np.argmax(muon_data_2[:,190:220], axis = 1) +190
+    peakWhere1_3 = np.argmax(muon_data_3[:,190:220], axis = 1) +190
+    
+    peakWhere2_0 = np.zeros((len(muon_data_0)), dtype = np.int16)
+    peakWhere2_1 = np.zeros((len(muon_data_1)), dtype = np.int16)
+    peakWhere2_2 = np.zeros((len(muon_data_2)), dtype = np.int16)
+    peakWhere2_3 = np.zeros((len(muon_data_3)), dtype = np.int16)
+    
+    peakWhere2_0 = find_peak2(muon_data_0, peakWhere2_0)
+    peakWhere2_1 = find_peak2(muon_data_1, peakWhere2_1)
+    peakWhere2_2 = find_peak2(muon_data_2, peakWhere2_2)
+    peakWhere2_3 = find_peak2(muon_data_3, peakWhere2_3)
+
+    peakWhere1 = np.zeros((len(muon_data_0)), dtype = np.int16)
+    peakWhere2 = np.zeros((len(muon_data_0)), dtype = np.int16)
+
+    for i in range(len(peakWhere2_0)):
+        if peakWhere2_0[i] != 0 :
+            peakWhere2[i] = peakWhere2_0[i]
+            peakWhere1[i] = peakWhere1_0[i]
+        elif peakWhere2_1[i] != 0 :
+            peakWhere2[i] = peakWhere2_1[i]
+            peakWhere1[i] = peakWhere1_1[i]
+        elif peakWhere2_2[i] != 0 :
+            peakWhere2[i] = peakWhere2_2[i]
+            peakWhere1[i] = peakWhere1_2[i]
+        elif peakWhere2_3[i] != 0 :
+            peakWhere2[i] = peakWhere2_3[i]
+            peakWhere1[i] = peakWhere1_3[i]
+
+    delta_t = (peakWhere2 - peakWhere1) * dt
+    
     return delta_t
 
 def get_delta_t2(filename = '../testData11_14bit_100mV_reduced.npz'):
@@ -39,14 +75,14 @@ def get_delta_t2(filename = '../testData11_14bit_100mV_reduced.npz'):
     return train_delta_t, test_delta_t
     
 def save_delta_t(filename_save, filename_call, train_evt_ind, test_evt_ind):
-    train_delta_t = lifetime.get_delta_t(filename_call, train_evt_ind)#delta_t_origin[train_evt_ind, train_ch_ind]
-    test_delta_t = lifetime.get_delta_t(filename_call, test_evt_ind)#delta_t_origin[test_evt_ind, test_ch_ind]
+    train_delta_t = get_delta_t(filename_call, train_evt_ind)#delta_t_origin[train_evt_ind, train_ch_ind]
+    test_delta_t = get_delta_t(filename_call, test_evt_ind)#delta_t_origin[test_evt_ind, test_ch_ind]
     
     np.savez(filename_save, train_delta_t = train_delta_t, test_delta_t = test_delta_t)
     
     return
 
-def get_data(filename ='../testData11_14bit_100mV.npy', len_data_to_load = 0, len_test = 0):
+def get_data(filename ='../testData11_14bit_100mV.npy', len_data_to_load = 0, len_test = 0, make_delta_t = False):
     '''
     :param filename: name of file to load
     :return: train data array (size: numEvt x numSam ), train label array 
@@ -119,6 +155,7 @@ def get_data(filename ='../testData11_14bit_100mV.npy', len_data_to_load = 0, le
         num_test = int(np.ceil(len_data_to_load*0.01))
     filename_save = filename.replace('npy', 'npz')
     
-    #save_delta_t(filename_save, filename, evt_ind[num_test:], evt_ind[:num_test])
+    if (make_delta_t):
+        save_delta_t(filename_save, filename, evt_ind[num_test:], evt_ind[:num_test])
     
     return data[num_test:],label[num_test:],data[:num_test],label[:num_test], evt_ind[num_test:], evt_ind[:num_test], ch_ind[num_test:], ch_ind[:num_test]
